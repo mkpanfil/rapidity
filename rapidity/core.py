@@ -9,18 +9,51 @@ class Grid1D:
     label: str
 
     @classmethod
-    def gauss_legendre(cls, a: float, b: float, n: int, label: str) -> "Grid1D":
-        points, weights = np.polynomial.legendre.leggauss(n)
-        points = 0.5 * (b - a) * points + 0.5 * (b + a)
-        weights = 0.5 * (b - a) * weights
-        return cls(points, weights, label)
-
-    @classmethod
     def uniform(cls, a: float, b: float, n: int, label: str) -> "Grid1D":
+        """Constructs a uniform quadrature grid on[a, b] of n points
+
+        Parameters
+        ----------
+        a, b : float
+            The grid boundaries.
+        n : int
+            Number of quadrature points.
+        label : str
+            Dimension label
+
+        Returns
+        -------
+        Grid1D
+            A uniform quadrature grid.
+        """
+
         points = np.linspace(a, b, n)
         weights = np.full(n, (b - a) / (n - 1))
         weights[0] /= 2
         weights[-1] /= 2
+        return cls(points, weights, label)
+
+    @classmethod
+    def gauss_legendre(cls, a: float, b: float, n: int, label: str) -> "Grid1D":
+        """Constructs a Gauss-Legendre quadrature grid on [a, b] of n points
+
+        Parameters
+        ----------
+        a, b : float
+            The grid boundaries.
+        n : int
+            Number of quadrature points.
+        label : str
+            Dimension label
+
+        Returns
+        -------
+        Grid1D
+            A Gauss-Legendre quadrature grid.
+        """
+        points, weights = np.polynomial.legendre.leggauss(n)
+        points = 0.5 * (b - a) * points + 0.5 * (b + a)
+        weights = 0.5 * (b - a) * weights
         return cls(points, weights, label)
 
     @classmethod
@@ -52,6 +85,18 @@ class Grid1D:
 class Field:
     values: np.ndarray
     grids: list[Grid1D]
+
+    @classmethod
+    def from_function(cls, f: callable, grids: list[Grid1D]) -> "Field":
+        """Construct a field by evaluating a function on a product grid."""
+        # for a single grid
+        if len(grids) == 1:
+            values = f(grids[0].points)
+        # for multiple grids, meshgrid
+        else:
+            arrays = np.meshgrid(*[g.points for g in grids], indexing="ij")
+            values = f(*arrays)
+        return cls(values, grids)
 
     def _get_axis(self, dim: str | None = None) -> tuple[int, Grid1D]:
         if dim is None:

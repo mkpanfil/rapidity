@@ -1,8 +1,9 @@
 import numpy as np
-from rapidity.core import Grid1D
+from rapidity.core import Grid1D, Field
 
 
 def test_uniform_grid_is_uniform():
+    """Checks if the grid is uniform and with equal weights up to the boundaries"""
     a, b, n = 0.0, 1.0, 10
     grid = Grid1D.uniform(a, b, n, "x")
 
@@ -19,6 +20,7 @@ def test_uniform_grid_is_uniform():
 
 
 def test_uniform_grid_integrates_constant():
+    """Constant function integrates to sum of the grid weights"""
     a, b, n = 0.0, 1.0, 10
     grid = Grid1D.uniform(a, b, n, "x")
 
@@ -54,3 +56,23 @@ def test_gauss_hermite_integrates_gaussian_exactly():
     # integral of exp(-x^2) over (-inf, inf) = sqrt(pi)
     f = np.exp(-(grid.points**2))
     assert np.isclose(f @ grid.weights, np.sqrt(np.pi))
+
+
+def test_field_from_function_1d():
+    """Field.from_function evaluates a 1D function correctly on a single grid."""
+    grid = Grid1D.gauss_legendre(-10, 10, 200, "theta")
+    field = Field.from_function(lambda theta: np.exp(-(theta**2)), [grid])
+
+    assert field.values.shape == (200,)
+    assert np.allclose(field.values, np.exp(-(grid.points**2)))
+
+
+def test_field_from_function_2d():
+    """Field.from_function evaluates a 2D function correctly on a product grid."""
+    grid_x = Grid1D.uniform(0.0, 1.0, 10, "x")
+    grid_t = Grid1D.uniform(0.0, 1.0, 10, "t")
+    field = Field.from_function(lambda x, t: x + t, [grid_x, grid_t])
+
+    assert field.values.shape == (10, 10)
+    assert np.allclose(field.values[0, :], grid_t.points)  # x=0: f = t
+    assert np.allclose(field.values[:, 0], grid_x.points)  # t=0: f = x
