@@ -1,0 +1,9 @@
+[project]
+name = "rapidity"
+version = "0.1.0"
+description = "Numerics for quantum integrable models"
+requires-python = ">=3.9"
+dependencies = [
+    "numpy",
+    "scipy",
+]

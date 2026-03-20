@@ -1,0 +1,52 @@
+import numpy as np
+from dataclasses import dataclass
+
+
+@dataclass
+class Grid1D:
+    points: np.ndarray
+    weights: np.ndarray
+    label: str
+
+    @classmethod
+    def gauss_legendre(cls, a: float, b: float, n: int, label: str) -> "Grid1D":
+        points, weights = np.polynomial.legendre.leggauss(n)
+        points = 0.5 * (b - a) * points + 0.5 * (b + a)
+        weights = 0.5 * (b - a) * weights
+        return cls(points, weights, label)
+
+    @classmethod
+    def uniform(cls, a: float, b: float, n: int, label: str) -> "Grid1D":
+        points = np.linspace(a, b, n)
+        weights = np.full(n, (b - a) / (n - 1))
+        weights[0] /= 2
+        weights[-1] /= 2
+        return cls(points, weights, label)
+
+
+@dataclass
+class Field:
+    values: np.ndarray
+    grids: list[Grid1D]
+
+    def _get_axis(self, dim: str | None = None) -> tuple[int, Grid1D]:
+        if dim is None:
+            if len(self.grids) != 1:
+                raise ValueError("Must specify dim for multi-dimensional fields")
+            return 0, self.grids[0]
+        for i, g in enumerate(self.grids):
+            if g.label == dim:
+                return i, g
+        raise ValueError(
+            f"Dimension '{dim}' not found. Available dimensions: {[g.label for g in self.grids]}"
+        )
+
+    def integrate(self, dim: str | None = None) -> "Field":
+        axis, grid = self._get_axis(dim)
+        new_values = self.values.swapaxes(axis, -1) @ grid.weights
+        new_grids = [g for g in self.grids if g != grid]
+        return Field(new_values, new_grids)
+
+    def convolve(self, kernel: "Field", dim: str | None = None) -> "Field":
+        axis, grid = self._get_axis(dim)
+        ...
