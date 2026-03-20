@@ -23,6 +23,30 @@ class Grid1D:
         weights[-1] /= 2
         return cls(points, weights, label)
 
+    @classmethod
+    def gauss_hermite(cls, n: int, label: str) -> "Grid1D":
+        """Construct a Gauss-Hermite quadrature grid on (-inf, inf).
+
+        Approximates integrals of rapidly decaying functions f(x) on the
+        full real line, without assuming any explicit Gaussian factor in
+        the integrand.
+
+        Parameters
+        ----------
+        n : int
+            Number of quadrature points.
+        label : str
+            Dimension label.
+
+        Returns
+        -------
+        Grid1D
+            A Gauss-Hermite quadrature grid.
+        """
+        points, weights = np.polynomial.hermite.hermgauss(n)
+        weights = weights * np.exp(points**2)
+        return cls(points, weights, label)
+
 
 @dataclass
 class Field:

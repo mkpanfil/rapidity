@@ -27,7 +27,7 @@ def test_uniform_grid_integrates_constant():
     assert np.isclose(f @ grid.weights, b - a)
 
 
-def test_uniform_grid_integrates_linear():
+def test_uniform_grid_integrates_linear_exactly():
     """The uniform grid integrates a linear function exactly"""
     a, b, n = 0.0, 1.0, 10
     grid = Grid1D.uniform(a, b, n, "x")
@@ -44,3 +44,13 @@ def test_gauss_legendre_integrates_polynomials_exactly():
     f = grid.points ** (2 * n - 1)
     expected = (b ** (2 * n) - a ** (2 * n)) / (2 * n)
     assert np.isclose(f @ grid.weights, expected)
+
+
+def test_gauss_hermite_integrates_gaussian_exactly():
+    """Gauss-Hermite integrates a plain Gaussian on the real line exactly."""
+    n = 10
+    grid = Grid1D.gauss_hermite(n, "theta")
+
+    # integral of exp(-x^2) over (-inf, inf) = sqrt(pi)
+    f = np.exp(-(grid.points**2))
+    assert np.isclose(f @ grid.weights, np.sqrt(np.pi))
