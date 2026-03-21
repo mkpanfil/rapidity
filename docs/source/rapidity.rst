@@ -4,31 +4,12 @@ rapidity package
 Submodules
 ----------
 
-rapidity.core module
---------------------
+.. toctree::
+   :maxdepth: 4
 
-.. automodule:: rapidity.core
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
-
-rapidity.utils module
----------------------
-
-.. automodule:: rapidity.utils
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
-
-rapidity.fredholm module
-------------------------
-
-.. automodule:: rapidity.fredholm
-   :members:
-   :show-inheritance:
-   :undoc-members:
+   rapidity.core
+   rapidity.fredholm
+   rapidity.utils
 
 Module contents
 ---------------
