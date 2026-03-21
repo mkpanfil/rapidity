@@ -219,3 +219,33 @@ class Field:
         new_values = kernel.values @ (grid.weights * self.values)
         new_grids = [g for g in self.grids if g != grid]
         return Field(new_values, new_grids)
+
+    def interpolate(self, new_grid: Grid1D) -> "Field":
+        """Interpolate the field onto a new grid.
+
+        Currently supported for 1D fields only.
+
+        Parameters
+        ----------
+        new_grid : Grid1D
+            The grid to interpolate onto.
+
+        Returns
+        -------
+        Field
+            A new Field with values interpolated onto new_grid.
+
+        Raises
+        ------
+        NotImplementedError
+            If the field is not 1D.
+        """
+        if len(self.grids) != 1:
+            raise NotImplementedError(
+                "interpolation is currently only supported for 1D fields"
+            )
+
+        from scipy.interpolate import interp1d
+
+        f = interp1d(self.grids[0].points, self.values, kind="cubic")
+        return Field(f(new_grid.points), [new_grid])

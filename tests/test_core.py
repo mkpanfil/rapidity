@@ -6,6 +6,7 @@ Covers:
 - Field.from_function: 1D and 2D cases
 - Field.integrate: correctness and error handling
 - Field.convolve: correctness
+- Field.interpolate: recovery, finer grid, error handling
 """
 
 import numpy as np
@@ -128,3 +129,31 @@ def test_convolve_gaussian_with_gaussian():
     result = f.convolve(kernel)
     expected = np.sqrt(np.pi / 2) * np.exp(-(grid.points**2) / 2)
     assert np.allclose(result.values, expected, atol=1e-6)
+
+
+def test_interpolate_exact_recovery():
+    """Interpolating onto the same grid returns the same values."""
+    grid = Grid1D.gauss_legendre(-5.0, 5.0, 50, "x")
+    field = Field.from_function(lambda x: np.exp(-(x**2)), [grid])
+    result = field.interpolate(grid)
+    assert np.allclose(result.values, field.values)
+
+
+def test_interpolate_smooth_function():
+    """Interpolation of a smooth function onto a finer grid is accurate."""
+    coarse_grid = Grid1D.uniform(-2.0, 2.0, 20, "x")
+    fine_grid = Grid1D.uniform(-2.0, 2.0, 100, "x")
+    field = Field.from_function(lambda x: np.exp(-(x**2)), [coarse_grid])
+    result = field.interpolate(fine_grid)
+    expected = np.exp(-(fine_grid.points**2))
+    assert np.allclose(result.values, expected, atol=1e-4)
+
+
+def test_interpolate_raises_for_multidimensional():
+    """interpolate raises NotImplementedError for multi-dimensional fields."""
+    grid_x = Grid1D.uniform(0.0, 1.0, 10, "x")
+    grid_t = Grid1D.uniform(0.0, 1.0, 10, "t")
+    field = Field.from_function(lambda x, t: x + t, [grid_x, grid_t])
+    new_grid = Grid1D.uniform(0.0, 1.0, 20, "x")
+    with pytest.raises(NotImplementedError):
+        field.interpolate(new_grid)
