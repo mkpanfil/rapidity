@@ -1,5 +1,21 @@
+"""
+Tests for rapidity.core — Grid1D and Field.
+
+Covers:
+- Grid1D constructors: uniform, gauss_legendre, gauss_hermite
+- Field.from_function: 1D and 2D cases
+- Field.integrate: correctness and error handling
+- Field.convolve: correctness
+"""
+
 import numpy as np
+import pytest
 from rapidity.core import Grid1D, Field
+
+
+# ---------------------------------------------------------------------------
+# Grid1D
+# ---------------------------------------------------------------------------
 
 
 def test_uniform_grid_is_uniform():
@@ -58,6 +74,11 @@ def test_gauss_hermite_integrates_gaussian_exactly():
     assert np.isclose(f @ grid.weights, np.sqrt(np.pi))
 
 
+# ---------------------------------------------------------------------------
+# Field
+# ---------------------------------------------------------------------------
+
+
 def test_field_from_function_1d():
     """Field.from_function evaluates a 1D function correctly on a single grid."""
     grid = Grid1D.gauss_legendre(-10, 10, 200, "theta")
@@ -76,3 +97,34 @@ def test_field_from_function_2d():
     assert field.values.shape == (10, 10)
     assert np.allclose(field.values[0, :], grid_t.points)  # x=0: f = t
     assert np.allclose(field.values[:, 0], grid_x.points)  # t=0: f = x
+
+
+def test_integrate_raises_for_missing_dim():
+    """integrate raises ValueError when the requested dimension does not exist."""
+    grid = Grid1D.gauss_legendre(-10, 10, 50, "theta")
+    field = Field.from_function(lambda theta: np.exp(-(theta**2)), [grid])
+
+    with pytest.raises(ValueError):
+        field.integrate("x")
+
+
+def test_integrate_raises_without_dim_for_multidimensional_field():
+    """integrate raises ValueError when dim is not specified for a multi-dimensional field."""
+    grid_x = Grid1D.uniform(0.0, 1.0, 10, "x")
+    grid_t = Grid1D.uniform(0.0, 1.0, 10, "t")
+    field = Field.from_function(lambda x, t: x + t, [grid_x, grid_t])
+
+    with pytest.raises(ValueError):
+        field.integrate()
+
+
+def test_convolve_gaussian_with_gaussian():
+    """Convolution of two Gaussians gives a Gaussian with known width."""
+    grid = Grid1D.gauss_hermite(100, "theta")
+
+    f = Field.from_function(lambda theta: np.exp(-(theta**2)), [grid])
+    kernel = Field.from_function(lambda t1, t2: np.exp(-((t1 - t2) ** 2)), [grid, grid])
+
+    result = f.convolve(kernel)
+    expected = np.sqrt(np.pi / 2) * np.exp(-(grid.points**2) / 2)
+    assert np.allclose(result.values, expected, atol=1e-6)
