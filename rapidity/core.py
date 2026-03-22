@@ -10,6 +10,7 @@ All other modules in the package build on these two classes.
 """
 
 import numpy as np
+import h5py
 from dataclasses import dataclass
 
 # ---------------------------------------------------------------------------
@@ -146,6 +147,51 @@ class Field:
         else:
             arrays = np.meshgrid(*[g.points for g in grids], indexing="ij")
             values = f(*arrays)
+        return cls(values, grids)
+
+    def save(self, path: str) -> None:
+        """Save the field to an HDF5 file.
+
+        Parameters
+        ----------
+        path : str
+            Path to the HDF5 file to create.
+        """
+        with h5py.File(path, "w") as f:
+            f.create_dataset("values", data=self.values)
+            grids_group = f.create_group("grids")
+            for i, grid in enumerate(self.grids):
+                g = grids_group.create_group(str(i))
+                g.create_dataset("points", data=grid.points)
+                g.create_dataset("weights", data=grid.weights)
+                g.attrs["label"] = grid.label
+
+    @classmethod
+    def load(cls, path: str) -> "Field":
+        """Load a field from an HDF5 file.
+
+        Parameters
+        ----------
+        path : str
+            Path to the HDF5 file to load.
+
+        Returns
+        -------
+        Field
+            The field stored in the file.
+        """
+        with h5py.File(path, "r") as f:
+            values = f["values"][:]
+            grids = []
+            for i in range(len(f["grids"])):
+                g = f["grids"][str(i)]
+                grids.append(
+                    Grid1D(
+                        points=g["points"][:],
+                        weights=g["weights"][:],
+                        label=g.attrs["label"],
+                    )
+                )
         return cls(values, grids)
 
     def _get_axis(self, dim: str | None = None) -> tuple[int, Grid1D]:

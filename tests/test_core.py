@@ -11,6 +11,8 @@ Covers:
 
 import numpy as np
 import pytest
+import tempfile
+import os
 from rapidity.core import Grid1D, Field
 
 
@@ -186,3 +188,40 @@ def test_derivative_along_axis():
     # df/dx = 2x, independent of t
     expected = 2 * grid_x.points[:, None] * np.ones((100, 50))
     assert np.allclose(result.values, expected, atol=1e-10)
+
+
+def test_field_save_load_1d():
+    """Saving and loading a 1D field recovers the original field exactly."""
+    grid = Grid1D.gauss_legendre(-5.0, 5.0, 50, "theta")
+    field = Field.from_function(lambda x: np.exp(-(x**2)), [grid])
+
+    with tempfile.NamedTemporaryFile(suffix=".h5", delete=False) as f:
+        path = f.name
+    try:
+        field.save(path)
+        loaded = Field.load(path)
+        assert np.allclose(loaded.values, field.values)
+        assert np.allclose(loaded.grids[0].points, grid.points)
+        assert np.allclose(loaded.grids[0].weights, grid.weights)
+        assert loaded.grids[0].label == grid.label
+    finally:
+        os.remove(path)
+
+
+def test_field_save_load_2d():
+    """Saving and loading a 2D field recovers the original field exactly."""
+    grid_x = Grid1D.uniform(0.0, 1.0, 20, "x")
+    grid_t = Grid1D.uniform(0.0, 1.0, 20, "t")
+    field = Field.from_function(lambda x, t: x**2 + t, [grid_x, grid_t])
+
+    with tempfile.NamedTemporaryFile(suffix=".h5", delete=False) as f:
+        path = f.name
+    try:
+        field.save(path)
+        loaded = Field.load(path)
+        assert np.allclose(loaded.values, field.values)
+        assert len(loaded.grids) == 2
+        assert loaded.grids[0].label == "x"
+        assert loaded.grids[1].label == "t"
+    finally:
+        os.remove(path)
