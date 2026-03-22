@@ -157,3 +157,32 @@ def test_interpolate_raises_for_multidimensional():
     new_grid = Grid1D.uniform(0.0, 1.0, 20, "x")
     with pytest.raises(NotImplementedError):
         field.interpolate(new_grid)
+
+
+def test_derivative_first_order_quadratic():
+    """First derivative of a quadratic function is exact."""
+    grid = Grid1D.uniform(-5.0, 5.0, 100, "x")
+    field = Field.from_function(lambda x: x**2, [grid])
+    result = field.derivative()
+    expected = 2 * grid.points
+    assert np.allclose(result.values, expected, atol=1e-10)
+
+
+def test_derivative_second_order_quadratic():
+    """Second derivative of a quadratic function is exact."""
+    grid = Grid1D.uniform(-5.0, 5.0, 100, "x")
+    field = Field.from_function(lambda x: x**2, [grid])
+    result = field.derivative(order=2)
+    expected = np.full_like(grid.points, 2.0)
+    assert np.allclose(result.values, expected, atol=1e-10)
+
+
+def test_derivative_along_axis():
+    """Derivative along a specific axis of a 2D field is correct."""
+    grid_x = Grid1D.uniform(-5.0, 5.0, 100, "x")
+    grid_t = Grid1D.uniform(0.0, 1.0, 50, "t")
+    field = Field.from_function(lambda x, t: x**2 + t, [grid_x, grid_t])
+    result = field.derivative("x")
+    # df/dx = 2x, independent of t
+    expected = 2 * grid_x.points[:, None] * np.ones((100, 50))
+    assert np.allclose(result.values, expected, atol=1e-10)

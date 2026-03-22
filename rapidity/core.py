@@ -180,6 +180,39 @@ class Field:
             f"Dimension '{dim}' not found. Available dimensions: {[g.label for g in self.grids]}"
         )
 
+    def derivative(self, dim: str | None = None, order: int = 1) -> "Field":
+        """Compute the derivative of the field along a dimension.
+
+        Uses second-order accurate finite differences via numpy.gradient.
+
+        Parameters
+        ----------
+        dim : str, optional
+            Dimension to differentiate along. Can be omitted for 1D fields.
+        order : int, optional
+            Order of the derivative, either 1 or 2. Default is 1.
+
+        Returns
+        -------
+        Field
+            A new Field with the same grids containing the derivative values.
+
+        Raises
+        ------
+        ValueError
+            If order is not 1 or 2.
+        """
+        if order not in (1, 2):
+            raise ValueError(f"order must be 1 or 2, got {order}")
+
+        axis, grid = self._get_axis(dim)
+        # edge_order=2 ensures second-order accuracy at boundaries, consistent with
+        # the second-order accurate central differences used in the interior
+        result = np.gradient(self.values, grid.points, axis=axis, edge_order=2)
+        if order == 2:
+            result = np.gradient(result, grid.points, axis=axis, edge_order=2)
+        return Field(result, self.grids)
+
     def integrate(self, dim: str | None = None) -> "Field":
         """Integrate the field along a dimension using quadrature weights.
 
