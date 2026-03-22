@@ -107,6 +107,46 @@ class Field:
     values: np.ndarray
     grids: list[Grid1D]
 
+    # -----------------------------------------------------------------------
+    # Internal helpers
+    # -----------------------------------------------------------------------
+
+    def _get_axis(self, dim: str | None = None) -> tuple[int, Grid1D]:
+        """Find the axis index and grid corresponding to a dimension label.
+
+        Parameters
+        ----------
+        dim : str, optional
+            Dimension label to look up. If None and the field is 1D,
+            returns the only axis. If None and the field is multi-dimensional,
+            raises a ValueError.
+
+        Returns
+        -------
+        tuple[int, Grid1D]
+            The axis index and corresponding Grid1D object.
+
+        Raises
+        ------
+        ValueError
+            If dim is None and the field is multi-dimensional, or if the
+            requested dimension label is not found.
+        """
+        if dim is None:
+            if len(self.grids) != 1:
+                raise ValueError("Must specify dim for multi-dimensional fields")
+            return 0, self.grids[0]
+        for i, g in enumerate(self.grids):
+            if g.label == dim:
+                return i, g
+        raise ValueError(
+            f"Dimension '{dim}' not found. Available dimensions: {[g.label for g in self.grids]}"
+        )
+
+    # -----------------------------------------------------------------------
+    # Constructors
+    # -----------------------------------------------------------------------
+
     @classmethod
     def from_function(cls, f: callable, grids: list[Grid1D]) -> "Field":
         """Construct a Field by evaluating a function on a product grid.
@@ -149,23 +189,6 @@ class Field:
             values = f(*arrays)
         return cls(values, grids)
 
-    def save(self, path: str) -> None:
-        """Save the field to an HDF5 file.
-
-        Parameters
-        ----------
-        path : str
-            Path to the HDF5 file to create.
-        """
-        with h5py.File(path, "w") as f:
-            f.create_dataset("values", data=self.values)
-            grids_group = f.create_group("grids")
-            for i, grid in enumerate(self.grids):
-                g = grids_group.create_group(str(i))
-                g.create_dataset("points", data=grid.points)
-                g.create_dataset("weights", data=grid.weights)
-                g.attrs["label"] = grid.label
-
     @classmethod
     def load(cls, path: str) -> "Field":
         """Load a field from an HDF5 file.
@@ -194,37 +217,9 @@ class Field:
                 )
         return cls(values, grids)
 
-    def _get_axis(self, dim: str | None = None) -> tuple[int, Grid1D]:
-        """Find the axis index and grid corresponding to a dimension label.
-
-        Parameters
-        ----------
-        dim : str, optional
-            Dimension label to look up. If None and the field is 1D,
-            returns the only axis. If None and the field is multi-dimensional,
-            raises a ValueError.
-
-        Returns
-        -------
-        tuple[int, Grid1D]
-            The axis index and corresponding Grid1D object.
-
-        Raises
-        ------
-        ValueError
-            If dim is None and the field is multi-dimensional, or if the
-            requested dimension label is not found.
-        """
-        if dim is None:
-            if len(self.grids) != 1:
-                raise ValueError("Must specify dim for multi-dimensional fields")
-            return 0, self.grids[0]
-        for i, g in enumerate(self.grids):
-            if g.label == dim:
-                return i, g
-        raise ValueError(
-            f"Dimension '{dim}' not found. Available dimensions: {[g.label for g in self.grids]}"
-        )
+    # -----------------------------------------------------------------------
+    # Calculus
+    # -----------------------------------------------------------------------
 
     def derivative(self, dim: str | None = None, order: int = 1) -> "Field":
         """Compute the derivative of the field along a dimension.
@@ -328,3 +323,24 @@ class Field:
 
         f = interp1d(self.grids[0].points, self.values, kind="cubic")
         return Field(f(new_grid.points), [new_grid])
+
+    # -----------------------------------------------------------------------
+    # I/O
+    # -----------------------------------------------------------------------
+
+    def save(self, path: str) -> None:
+        """Save the field to an HDF5 file.
+
+        Parameters
+        ----------
+        path : str
+            Path to the HDF5 file to create.
+        """
+        with h5py.File(path, "w") as f:
+            f.create_dataset("values", data=self.values)
+            grids_group = f.create_group("grids")
+            for i, grid in enumerate(self.grids):
+                g = grids_group.create_group(str(i))
+                g.create_dataset("points", data=grid.points)
+                g.create_dataset("weights", data=grid.weights)
+                g.attrs["label"] = grid.label
