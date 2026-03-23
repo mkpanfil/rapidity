@@ -1,53 +1,36 @@
-This package performs numerical computation useful in studying Quantum Integrable Models
+# rapidity
+
+Numerical tools for quantum integrable models.
 
 
+## Installation
+```bash
+pip install rapidity
+```
 
+Or for development:
+```bash
+git clone https://github.com/yourusername/rapidity.git
+cd rapidity
+pip install -e .
+```
 
+## Documentation
 
-DocStyle
---------
+Full documentation including tutorials and API reference is available at [ReadTheDocs](https://rapidity.readthedocs.io/en/latest/).
 
-We follow the Numpy DocStyle, 
-[see here](https://numpydoc.readthedocs.io/en/latest/format.html)
+## Citation
 
+If you use *rapidity* in your research, please cite:
 
-# An example
+[Author(s)], *rapidity: numerical tools for quantum integrable models*,
+[SciPost CodeRepository, year, DOI]
 
-    '''
-    Approximates numbers close to zero by zero. Works for complex numbers.
+## Acknowledgements
 
-    Parameters
-    ----------
-    a : np.array
-        Input array.
-    tol : float, optional
-        Tolerance. The default is 1e-15.
+We are grateful to Antoni Lis and Jacek Pawełczyk for working together
+on numerical solutions to the GHD equations.
 
-    Returns
-    -------
-    a : np.array
-        Output array.
-        
-        
-    Raises
-    ------
-    
-    
-    See Also
-    --------
-    
-    
-    
-    Notes
-    -----
-    
-    
-    
-    References
-    ----------
-    
-    
-    Examples
-    --------
+## License
 
-    '''
+MIT License. See `LICENSE` for details.

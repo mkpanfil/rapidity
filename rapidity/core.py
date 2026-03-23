@@ -159,9 +159,11 @@ class Field:
         Parameters
         ----------
         f : callable
-            A function to evaluate on the grid points. For a single grid,
-            f should accept a 1D array. For multiple grids, f should accept
-            one array per grid, as produced by np.meshgrid with indexing='ij'.
+            A function to evaluate on the grid points. Must be vectorized,
+            i.e. able to accept numpy arrays as arguments and return a
+            numpy array. For a single grid, f should accept a 1D array.
+            For multiple grids, f should accept one array per grid,
+            as produced by np.meshgrid with indexing='ij'.
         grids : list[Grid1D]
             The grids defining the domain. The order determines the axis
             ordering of the resulting values array.
