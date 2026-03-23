@@ -1,13 +1,20 @@
 rapidity package
 ================
 
+Subpackages
+-----------
+
+.. toctree::
+   :maxdepth: 4
+
+   rapidity.core
+
 Submodules
 ----------
 
 .. toctree::
    :maxdepth: 4
 
-   rapidity.core
    rapidity.fredholm
    rapidity.utils
 
