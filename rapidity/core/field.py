@@ -1,12 +1,19 @@
 """
-Core data structures for the rapidity package.
+Multi-dimensional fields on product grids.
 
-This module defines the two fundamental building blocks:
+This module defines :class:`Field`, which represents a physical quantity
+defined on a product of :class:`~rapidity.core.grid.Grid1D` grids. A field
+always carries its grids alongside its values, ensuring that the
+discretization structure is never lost.
 
-- Grid1D: a 1D quadrature grid with points, weights, and a label
-- Field: a multi-dimensional array of values defined on a product of Grid1D grids
+Key operations provided:
 
-All other modules in the package build on these two classes.
+- Construction via :meth:`Field.from_function` or :meth:`Field.load`
+- Calculus: :meth:`Field.integrate`, :meth:`Field.convolve`,
+  :meth:`Field.derivative`, :meth:`Field.interpolate`
+- Arithmetic: standard operators ``+``, ``-``, ``*``, ``/``, ``**``
+  between fields and scalars, with broadcasting along matching dimensions
+- I/O: :meth:`Field.save` and :meth:`Field.load` using HDF5
 """
 
 import numpy as np

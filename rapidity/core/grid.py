@@ -1,12 +1,16 @@
 """
-Core data structures for the rapidity package.
+One-dimensional quadrature grids.
 
-This module defines the two fundamental building blocks:
+This module defines :class:`Grid1D`, the fundamental discretization object
+in `rapidity`. A grid stores quadrature points, weights, and a dimension
+label. It is a pure data container with no knowledge of physical quantities.
 
-- Grid1D: a 1D quadrature grid with points, weights, and a label
-- Field: a multi-dimensional array of values defined on a product of Grid1D grids
+Alternative constructors are provided for common quadrature rules:
 
-All other modules in the package build on these two classes.
+- :meth:`Grid1D.gauss_legendre` — for integrals on finite intervals
+- :meth:`Grid1D.uniform` — trapezoid rule on a uniform grid
+- :meth:`Grid1D.gauss_hermite` — for rapidly decaying functions on the
+  full real line
 """
 
 import numpy as np
