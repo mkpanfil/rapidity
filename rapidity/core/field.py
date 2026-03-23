@@ -1,101 +1,27 @@
 """
-Core data structures for the rapidity package.
+Multi-dimensional fields on product grids.
 
-This module defines the two fundamental building blocks:
+This module defines :class:`Field`, which represents a physical quantity
+defined on a product of :class:`~rapidity.core.grid.Grid1D` grids. A field
+always carries its grids alongside its values, ensuring that the
+discretization structure is never lost.
 
-- Grid1D: a 1D quadrature grid with points, weights, and a label
-- Field: a multi-dimensional array of values defined on a product of Grid1D grids
+Key operations provided:
 
-All other modules in the package build on these two classes.
+- Construction via :meth:`Field.from_function` or :meth:`Field.load`
+- Calculus: :meth:`Field.integrate`, :meth:`Field.convolve`,
+  :meth:`Field.derivative`, :meth:`Field.interpolate`
+- Arithmetic: standard operators ``+``, ``-``, ``*``, ``/``, ``**``
+  between fields and scalars, with broadcasting along matching dimensions
+- I/O: :meth:`Field.save` and :meth:`Field.load` using HDF5
 """
 
 import numpy as np
 import h5py
 from dataclasses import dataclass
+from rapidity.core.grid import Grid1D
 
-# ---------------------------------------------------------------------------
-# Grid1D
-# ---------------------------------------------------------------------------
-
-
-@dataclass
-class Grid1D:
-    points: np.ndarray
-    weights: np.ndarray
-    label: str
-
-    @classmethod
-    def uniform(cls, a: float, b: float, n: int, label: str) -> "Grid1D":
-        """Constructs a uniform quadrature grid on[a, b] of n points
-
-        Parameters
-        ----------
-        a, b : float
-            The grid boundaries.
-        n : int
-            Number of quadrature points.
-        label : str
-            Dimension label
-
-        Returns
-        -------
-        Grid1D
-            A uniform quadrature grid.
-        """
-
-        points = np.linspace(a, b, n)
-        weights = np.full(n, (b - a) / (n - 1))
-        weights[0] /= 2
-        weights[-1] /= 2
-        return cls(points, weights, label)
-
-    @classmethod
-    def gauss_legendre(cls, a: float, b: float, n: int, label: str) -> "Grid1D":
-        """Constructs a Gauss-Legendre quadrature grid on [a, b] of n points
-
-        Parameters
-        ----------
-        a, b : float
-            The grid boundaries.
-        n : int
-            Number of quadrature points.
-        label : str
-            Dimension label
-
-        Returns
-        -------
-        Grid1D
-            A Gauss-Legendre quadrature grid.
-        """
-        points, weights = np.polynomial.legendre.leggauss(n)
-        points = 0.5 * (b - a) * points + 0.5 * (b + a)
-        weights = 0.5 * (b - a) * weights
-        return cls(points, weights, label)
-
-    @classmethod
-    def gauss_hermite(cls, n: int, label: str) -> "Grid1D":
-        """Construct a Gauss-Hermite quadrature grid on (-inf, inf).
-
-        Approximates integrals of rapidly decaying functions f(x) on the
-        full real line, without assuming any explicit Gaussian factor in
-        the integrand.
-
-        Parameters
-        ----------
-        n : int
-            Number of quadrature points.
-        label : str
-            Dimension label.
-
-        Returns
-        -------
-        Grid1D
-            A Gauss-Hermite quadrature grid.
-        """
-        points, weights = np.polynomial.hermite.hermgauss(n)
-        weights = weights * np.exp(points**2)
-        return cls(points, weights, label)
-
+_SCALAR_TYPES = (int, float, complex, np.floating, np.integer, np.complexfloating)
 
 # ---------------------------------------------------------------------------
 # Field
@@ -106,6 +32,124 @@ class Grid1D:
 class Field:
     values: np.ndarray
     grids: list[Grid1D]
+
+    # -----------------------------------------------------------------------
+    # Arithmetic operations
+    # -----------------------------------------------------------------------
+
+    def __add__(self, other: "Field | complex") -> "Field":
+        """Add two fields or a field and a scalar.
+
+        Two fields are added pointwise. If they have different dimensions,
+        the smaller field is broadcast along the missing dimensions, provided
+        the shared dimensions have identical grids.
+
+        Parameters
+        ----------
+        other : Field or scalar
+            The field or scalar to add. Scalars must be int, float, or complex.
+
+        Returns
+        -------
+        Field
+            The sum, defined on the union of both fields' grids.
+
+        Raises
+        ------
+        ValueError
+            If both fields share a dimension but with incompatible grids.
+        TypeError
+            If other is not a Field or a supported scalar type.
+        """
+        if isinstance(other, Field):
+            a, b, grids = _align(self, other)
+            return Field(a + b, grids)
+        if not isinstance(other, _SCALAR_TYPES):
+            raise TypeError(
+                f"unsupported operand type for +: 'Field' and '{type(other).__name__}'"
+            )
+        return Field(self.values + other, self.grids)
+
+    def __sub__(self, other: "Field | complex") -> "Field":
+        """Subtract two fields or a scalar from a field."""
+        if isinstance(other, Field):
+            a, b, grids = _align(self, other)
+            return Field(a - b, grids)
+        if not isinstance(other, _SCALAR_TYPES):
+            raise TypeError(
+                f"unsupported operand type for -: 'Field' and '{type(other).__name__}'"
+            )
+        return Field(self.values - other, self.grids)
+
+    def __mul__(self, other: "Field | complex") -> "Field":
+        """Multiply two fields or a field and a scalar."""
+        if isinstance(other, Field):
+            a, b, grids = _align(self, other)
+            return Field(a * b, grids)
+        if not isinstance(other, _SCALAR_TYPES):
+            raise TypeError(
+                f"unsupported operand type for *: 'Field' and '{type(other).__name__}'"
+            )
+        return Field(self.values * other, self.grids)
+
+    def __truediv__(self, other: "Field | complex") -> "Field":
+        """Divide two fields or a field by a scalar."""
+        if isinstance(other, Field):
+            a, b, grids = _align(self, other)
+            return Field(a / b, grids)
+        if not isinstance(other, _SCALAR_TYPES):
+            raise TypeError(
+                f"unsupported operand type for /: 'Field' and '{type(other).__name__}'"
+            )
+        return Field(self.values / other, self.grids)
+
+    def __neg__(self) -> "Field":
+        """Negate a field."""
+        return Field(-self.values, self.grids)
+
+    def __rmul__(self, other: complex) -> "Field":
+        """Right multiply a field by a scalar."""
+        if not isinstance(other, _SCALAR_TYPES):
+            raise TypeError(
+                f"unsupported operand type for *: '{type(other).__name__}' and 'Field'"
+            )
+        return Field(other * self.values, self.grids)
+
+    def __radd__(self, other: complex) -> "Field":
+        """Right add a scalar to a field."""
+        if not isinstance(other, _SCALAR_TYPES):
+            raise TypeError(
+                f"unsupported operand type for +: '{type(other).__name__}' and 'Field'"
+            )
+        return Field(other + self.values, self.grids)
+
+    def __rsub__(self, other: complex) -> "Field":
+        """Right subtract a field from a scalar."""
+        if not isinstance(other, _SCALAR_TYPES):
+            raise TypeError(
+                f"unsupported operand type for -: '{type(other).__name__}' and 'Field'"
+            )
+        return Field(other - self.values, self.grids)
+
+    def __rtruediv__(self, other: complex) -> "Field":
+        """Right divide a scalar by a field."""
+        if not isinstance(other, _SCALAR_TYPES):
+            raise TypeError(
+                f"unsupported operand type for /: '{type(other).__name__}' and 'Field'"
+            )
+        return Field(other / self.values, self.grids)
+
+    def __abs__(self) -> "Field":
+        """Absolute value of a field."""
+        return Field(np.abs(self.values), self.grids)
+
+    def __pow__(self, other: complex) -> "Field":
+        """Raise a field to a power."""
+        if not isinstance(other, _SCALAR_TYPES):
+            raise TypeError(
+                f"unsupported operand type for **: 'Field' and '{type(other).__name__}'"
+            )
+        return Field(self.values**other, self.grids)
 
     # -----------------------------------------------------------------------
     # Internal helpers
@@ -346,3 +390,47 @@ class Field:
                 g.create_dataset("points", data=grid.points)
                 g.create_dataset("weights", data=grid.weights)
                 g.attrs["label"] = grid.label
+
+
+def _align(
+    field1: "Field", field2: "Field"
+) -> tuple[np.ndarray, np.ndarray, list[Grid1D]]:
+    """Align two fields for broadcasting along matching dimensions."""
+    # check shared grids are compatible
+    field1_labels = [g.label for g in field1.grids]
+    field2_labels = [g.label for g in field2.grids]
+
+    for label in field1_labels:
+        if label in field2_labels:
+            field1_grid = field1.grids[field1_labels.index(label)]
+            field2_grid = field2.grids[field2_labels.index(label)]
+            if field1_grid != field2_grid:
+                raise ValueError(
+                    f"Dimension '{label}' is present in both fields "
+                    f"but grids are incompatible"
+                )
+
+    # build output grids — union of both grids in a consistent order
+    all_labels = field1_labels + [l for l in field2_labels if l not in field1_labels]
+    all_grids = []
+    for label in all_labels:
+        if label in field1_labels:
+            all_grids.append(field1.grids[field1_labels.index(label)])
+        else:
+            all_grids.append(field2.grids[field2_labels.index(label)])
+
+    # reshape self.values and other.values for broadcasting
+    field1_shape = [
+        field1.grids[field1_labels.index(l)].points.size if l in field1_labels else 1
+        for l in all_labels
+    ]
+    field2_shape = [
+        field2.grids[field2_labels.index(l)].points.size if l in field2_labels else 1
+        for l in all_labels
+    ]
+
+    return (
+        field1.values.reshape(field1_shape),
+        field2.values.reshape(field2_shape),
+        all_grids,
+    )

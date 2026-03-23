@@ -225,3 +225,145 @@ def test_field_save_load_2d():
         assert loaded.grids[1].label == "t"
     finally:
         os.remove(path)
+
+
+def test_add_fields_same_grid():
+    """Adding two fields on the same grid gives correct values."""
+    grid = Grid1D.gauss_legendre(-5.0, 5.0, 50, "x")
+    f = Field.from_function(lambda x: x**2, [grid])
+    g = Field.from_function(lambda x: x**3, [grid])
+    result = f + g
+    assert np.allclose(result.values, grid.points**2 + grid.points**3)
+    assert result.grids == [grid]
+
+
+def test_add_fields_broadcasting():
+    """Adding a 1D and 2D field broadcasts correctly."""
+    grid_x = Grid1D.uniform(0.0, 1.0, 10, "x")
+    grid_y = Grid1D.uniform(0.0, 1.0, 10, "y")
+    f = Field.from_function(lambda x: x**2, [grid_x])
+    g = Field.from_function(lambda x, y: x + y, [grid_x, grid_y])
+    result = f + g
+    assert result.values.shape == (10, 10)
+    assert result.grids == [grid_x, grid_y]
+    expected = (
+        grid_x.points[:, None] ** 2 + grid_x.points[:, None] + grid_y.points[None, :]
+    )
+    assert np.allclose(result.values, expected)
+
+
+def test_add_field_scalar():
+    """Adding a scalar to a field gives correct values."""
+    grid = Grid1D.gauss_legendre(-5.0, 5.0, 50, "x")
+    f = Field.from_function(lambda x: x**2, [grid])
+    result = f + 2.0
+    assert np.allclose(result.values, grid.points**2 + 2.0)
+
+
+def test_add_field_incompatible_grids_raises():
+    """Adding two fields with incompatible grids raises ValueError."""
+    grid1 = Grid1D.gauss_legendre(-5.0, 5.0, 50, "x")
+    grid2 = Grid1D.gauss_legendre(-3.0, 3.0, 50, "x")
+    f = Field.from_function(lambda x: x**2, [grid1])
+    g = Field.from_function(lambda x: x**3, [grid2])
+    with pytest.raises(ValueError):
+        f + g
+
+
+def test_add_field_invalid_type_raises():
+    """Adding a non-scalar to a field raises TypeError."""
+    grid = Grid1D.gauss_legendre(-5.0, 5.0, 50, "x")
+    f = Field.from_function(lambda x: x**2, [grid])
+    with pytest.raises(TypeError):
+        f + "string"
+
+
+def test_sub_fields():
+    """Subtracting two fields gives correct values."""
+    grid = Grid1D.gauss_legendre(-5.0, 5.0, 50, "x")
+    f = Field.from_function(lambda x: x**2, [grid])
+    g = Field.from_function(lambda x: x**3, [grid])
+    result = f - g
+    assert np.allclose(result.values, grid.points**2 - grid.points**3)
+
+
+def test_mul_fields():
+    """Multiplying two fields gives correct values."""
+    grid = Grid1D.gauss_legendre(-5.0, 5.0, 50, "x")
+    f = Field.from_function(lambda x: x**2, [grid])
+    g = Field.from_function(lambda x: x**3, [grid])
+    result = f * g
+    assert np.allclose(result.values, grid.points**5)
+
+
+def test_div_fields():
+    """Dividing two fields gives correct values."""
+    grid = Grid1D.gauss_legendre(-5.0, 5.0, 50, "x")
+    f = Field.from_function(lambda x: x**2, [grid])
+    g = Field.from_function(lambda x: x + 10.0, [grid])
+    result = f / g
+    assert np.allclose(result.values, grid.points**2 / (grid.points + 10.0))
+
+
+def test_neg_field():
+    """Negating a field gives correct values."""
+    grid = Grid1D.gauss_legendre(-5.0, 5.0, 50, "x")
+    f = Field.from_function(lambda x: x**2, [grid])
+    result = -f
+    assert np.allclose(result.values, -(grid.points**2))
+
+
+def test_abs_field():
+    """Absolute value of a field gives correct values."""
+    grid = Grid1D.gauss_legendre(-5.0, 5.0, 50, "x")
+    f = Field.from_function(lambda x: x, [grid])
+    result = abs(f)
+    assert np.allclose(result.values, np.abs(grid.points))
+
+
+def test_pow_field():
+    """Raising a field to a power gives correct values."""
+    grid = Grid1D.gauss_legendre(0.0, 5.0, 50, "x")
+    f = Field.from_function(lambda x: x, [grid])
+    result = f**2
+    assert np.allclose(result.values, grid.points**2)
+
+
+def test_rmul_field():
+    """Right multiplying a field by a scalar gives correct values."""
+    grid = Grid1D.gauss_legendre(-5.0, 5.0, 50, "x")
+    f = Field.from_function(lambda x: x**2, [grid])
+    result = 2.0 * f
+    assert np.allclose(result.values, 2.0 * grid.points**2)
+
+
+def test_radd_field():
+    """Right adding a scalar to a field gives correct values."""
+    grid = Grid1D.gauss_legendre(-5.0, 5.0, 50, "x")
+    f = Field.from_function(lambda x: x**2, [grid])
+    result = 2.0 + f
+    assert np.allclose(result.values, 2.0 + grid.points**2)
+
+
+def test_rsub_field():
+    """Right subtracting a field from a scalar gives correct values."""
+    grid = Grid1D.gauss_legendre(-5.0, 5.0, 50, "x")
+    f = Field.from_function(lambda x: x**2, [grid])
+    result = 2.0 - f
+    assert np.allclose(result.values, 2.0 - grid.points**2)
+
+
+def test_rtruediv_field():
+    """Right dividing a scalar by a field gives correct values."""
+    grid = Grid1D.gauss_legendre(1.0, 5.0, 50, "x")
+    f = Field.from_function(lambda x: x, [grid])
+    result = 1.0 / f
+    assert np.allclose(result.values, 1.0 / grid.points)
+
+
+def test_mul_complex_scalar():
+    """Multiplying a field by a complex scalar gives correct values."""
+    grid = Grid1D.gauss_legendre(-5.0, 5.0, 50, "x")
+    f = Field.from_function(lambda x: x**2, [grid])
+    result = f * (1 + 2j)
+    assert np.allclose(result.values, grid.points**2 * (1 + 2j))
