@@ -11,5 +11,5 @@ def test_fredholm_det_sine_kernel():
     Reference: Bornemann (2010), p. 5.
     """
     grid = Grid1D.gauss_legendre(0.0, 0.1, 50, "x")
-    kernel = Field.from_function(sine_kernel, [grid, grid])
+    kernel = sine_kernel(grid)
     assert np.isclose(fredholm_det(kernel), 0.9000272717982592, atol=1e-10)

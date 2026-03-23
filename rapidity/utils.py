@@ -29,28 +29,32 @@ def make_kernel(f: callable, grid: Grid1D) -> Field:
     return Field.from_function(lambda t1, t2: f(t1 - t2), [grid, grid])
 
 
-def sine_kernel(x: np.ndarray, y: np.ndarray) -> np.ndarray:
-    """The sine kernel.
+def sine_kernel(grid: Grid1D) -> Field:
+    """The sine kernel as a Field on a product grid.
 
     .. math::
 
         K(x, y) = \\frac{\\sin(\\pi(x-y))}{\\pi(x-y)}
 
-    The diagonal singularity at x = y is handled analytically via the
-    limiting value K(x, x) = 1.
+    The diagonal singularity at x = y is handled analytically via
+    numpy.sinc, which is defined as sin(πx)/(πx) with sinc(0) = 1.
 
     Parameters
     ----------
-    x : np.ndarray
-        First argument.
-    y : np.ndarray
-        Second argument.
+    grid : Grid1D
+        The quadrature grid on which the kernel is defined.
 
     Returns
     -------
-    np.ndarray
-        The sine kernel evaluated at (x, y).
+    Field
+        A 2D Field representing the sine kernel on the product grid.
+
+    Examples
+    --------
+    >>> grid = Grid1D.gauss_legendre(0.0, 1.0, 50, "x")
+    >>> kernel = sine_kernel(grid)
+    >>> det = fredholm_det(kernel)
     """
     # np.sinc is defined as sin(π*x)/(π*x), so the π factors are included
     # and the singularity at x = y is handled internally
-    return np.sinc(x - y)
+    return Field.from_function(lambda x, y: np.sinc(x - y), [grid, grid])
