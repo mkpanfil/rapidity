@@ -27,6 +27,18 @@ class Grid1D:
     weights: np.ndarray
     label: str
 
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Grid1D):
+            return NotImplemented
+        return (
+            self.label == other.label
+            and np.array_equal(self.points, other.points)
+            and np.array_equal(self.weights, other.weights)
+        )
+
+    def __hash__(self):
+        return hash((self.label, self.points.tobytes(), self.weights.tobytes()))
+
     @classmethod
     def uniform(cls, a: float, b: float, n: int, label: str) -> "Grid1D":
         """Constructs a uniform quadrature grid on[a, b] of n points
