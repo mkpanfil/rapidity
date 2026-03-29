@@ -15,6 +15,8 @@ Submodules
 .. toctree::
    :maxdepth: 4
 
+   rapidity.models
+   rapidity.tba
    rapidity.fredholm
    rapidity.utils
 
