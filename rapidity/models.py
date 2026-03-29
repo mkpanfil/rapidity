@@ -95,6 +95,10 @@ class LiebLiniger:
         """
         return sum(beta * self.charge(s, grid) for s, beta in betas.items())
 
+    def bare_state_density(self, grid: Grid1D) -> Field:
+        """Bare density of states: a(theta) = 1/(2pi)."""
+        return Field.from_function(lambda t: np.ones_like(t) / (2 * np.pi), [grid])
+
     def kernel(self, grid: Grid1D) -> Field:
         """Lieb-Liniger scattering kernel including the 1/(2π) factor.
 
