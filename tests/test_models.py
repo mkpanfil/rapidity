@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
 from rapidity.core import Grid1D
-from rapidity.models import LiebLiniger
+from rapidity.models import Model, LiebLiniger
 
 
 def test_lieb_liniger_raises_for_nonpositive_c():
@@ -21,3 +21,9 @@ def test_lieb_liniger_bare_state_density_is_derivative_of_momentum():
     q1_derivative = model.charge(1, grid).derivative() / (2 * np.pi)
 
     assert np.allclose(a.values, q1_derivative.values, atol=1e-10)
+
+
+def test_lieb_liniger_satisfies_model_protocol():
+    """LiebLiniger satisfies the Model protocol."""
+    model = LiebLiniger(c=1.0)
+    assert isinstance(model, Model)

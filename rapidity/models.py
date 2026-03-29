@@ -1,21 +1,59 @@
 """
 Physical models for the rapidity package.
 
-This module defines classes representing specific integrable models.
-Each model encodes the scattering kernel and single-particle charges
-needed for TBA and GHD calculations. The thermodynamic state is
-represented separately by :class:`~rapidity.tba.TBAState`.
+This module defines the :class:`Model` protocol, which specifies the
+interface that all integrable models must implement, and concrete
+implementations of specific models.
 
 Currently implemented:
 
 - :class:`LiebLiniger` — the Lieb-Liniger model of bosons with delta
   interaction
+
+To implement a new model, create a dataclass that satisfies the
+:class:`Model` protocol by implementing all required methods.
 """
 
 import numpy as np
+from typing import Protocol, runtime_checkable
 from dataclasses import dataclass
 from rapidity.core import Grid1D, Field
 from rapidity.utils import make_kernel
+
+
+# ---------------------------------------------------------------------------
+# Model
+# ---------------------------------------------------------------------------
+
+
+@runtime_checkable
+class Model(Protocol):
+    """Protocol for integrable models.
+
+    Any class implementing these methods can be used as a model
+    in :class:`TBAState`.
+    """
+
+    def charge(self, order: int, grid: Grid1D) -> Field:
+        """Single-particle eigenvalue of the conserved charge of given order."""
+        ...
+
+    def driving(self, grid: Grid1D, betas: dict[int, float]) -> Field:
+        """Driving term as a linear combination of charge eigenvalues."""
+        ...
+
+    def bare_state_density(self, grid: Grid1D) -> Field:
+        """Bare density of states a(theta)."""
+        ...
+
+    def kernel(self, grid: Grid1D) -> Field:
+        """Scattering kernel including the 1/(2π) factor."""
+        ...
+
+
+# ---------------------------------------------------------------------------
+# LiebLiniger
+# ---------------------------------------------------------------------------
 
 
 @dataclass
