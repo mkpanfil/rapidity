@@ -34,6 +34,8 @@ class Model(Protocol):
     in :class:`TBAState`.
     """
 
+    rapidity_label: str
+
     def charge(self, order: int, grid: Grid1D) -> Field:
         """Single-particle eigenvalue of the conserved charge of given order."""
         ...
