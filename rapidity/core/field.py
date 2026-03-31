@@ -439,7 +439,9 @@ def _align(
                 )
 
     # build output grids — union of both grids in a consistent order
-    all_labels = field1_labels + [l for l in field2_labels if l not in field1_labels]
+    all_labels = field1_labels + [
+        label for label in field2_labels if label not in field1_labels
+    ]
     all_grids = []
     for label in all_labels:
         if label in field1_labels:
@@ -449,12 +451,16 @@ def _align(
 
     # reshape self.values and other.values for broadcasting
     field1_shape = [
-        field1.grids[field1_labels.index(l)].points.size if l in field1_labels else 1
-        for l in all_labels
+        field1.grids[field1_labels.index(label)].points.size
+        if label in field1_labels
+        else 1
+        for label in all_labels
     ]
     field2_shape = [
-        field2.grids[field2_labels.index(l)].points.size if l in field2_labels else 1
-        for l in all_labels
+        field2.grids[field2_labels.index(label)].points.size
+        if label in field2_labels
+        else 1
+        for label in all_labels
     ]
 
     return (
