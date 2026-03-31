@@ -1,5 +1,5 @@
 import numpy as np
-from rapidity.core import Grid1D, Field
+from rapidity.core import Grid1D
 from rapidity.fredholm import fredholm_det
 from rapidity.utils import sine_kernel
 
