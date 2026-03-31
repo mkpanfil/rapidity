@@ -333,12 +333,40 @@ class Field:
             A 2D field representing the kernel K(theta, theta').
         dim : str, optional
             Dimension to convolve along.
+
+        Returns
+        -------
+        Field
+            A new Field with the same grids as self, with convolution
+            performed along the specified dimension.
+
+        Raises
+        ------
+        ValueError
+            If kernel is not a 2D field defined on the same grid in both
+            dimensions.
         """
         axis, grid = self._get_axis(dim)
-        # kernel.values is (n, n), contract with weights
-        new_values = kernel.values @ (grid.weights * self.values)
-        new_grids = [g for g in self.grids if g != grid]
-        return Field(new_values, new_grids)
+
+        if len(kernel.grids) != 2:
+            raise ValueError("kernel must be a 2D Field")
+        if kernel.grids[0] != grid or kernel.grids[1] != grid:
+            raise ValueError(
+                "kernel must be defined on the same grid for both dimensions"
+            )
+
+        # Move convolution axis to last position for vectorized contraction
+        data = np.moveaxis(self.values, axis, -1)
+        weighted = data * grid.weights
+
+        # K[i,j] * f[...,j] summed over j => result[...,i]
+        conv = np.tensordot(kernel.values, weighted, axes=([1], [-1]))
+        conv = np.moveaxis(conv, 0, -1)
+
+        # Restore original axis ordering
+        new_values = np.moveaxis(conv, -1, axis)
+
+        return Field(new_values, self.grids)
 
     def interpolate(self, new_grid: Grid1D) -> "Field":
         """Interpolate the field onto a new grid.
@@ -411,7 +439,9 @@ def _align(
                 )
 
     # build output grids — union of both grids in a consistent order
-    all_labels = field1_labels + [l for l in field2_labels if l not in field1_labels]
+    all_labels = field1_labels + [
+        label for label in field2_labels if label not in field1_labels
+    ]
     all_grids = []
     for label in all_labels:
         if label in field1_labels:
@@ -421,12 +451,16 @@ def _align(
 
     # reshape self.values and other.values for broadcasting
     field1_shape = [
-        field1.grids[field1_labels.index(l)].points.size if l in field1_labels else 1
-        for l in all_labels
+        field1.grids[field1_labels.index(label)].points.size
+        if label in field1_labels
+        else 1
+        for label in all_labels
     ]
     field2_shape = [
-        field2.grids[field2_labels.index(l)].points.size if l in field2_labels else 1
-        for l in all_labels
+        field2.grids[field2_labels.index(label)].points.size
+        if label in field2_labels
+        else 1
+        for label in all_labels
     ]
 
     return (

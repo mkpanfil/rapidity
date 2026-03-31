@@ -133,6 +133,29 @@ def test_convolve_gaussian_with_gaussian():
     assert np.allclose(result.values, expected, atol=1e-6)
 
 
+def test_convolve_along_axis_2d():
+    """Convolution along a specified axis in a 2D field retains other dimensions."""
+    grid_x = Grid1D.uniform(0.0, 1.0, 4, "x")
+    grid_t = Grid1D.uniform(0.0, 1.0, 5, "t")
+
+    f = Field.from_function(lambda x, t: x + t, [grid_x, grid_t])
+    kernel = Field.from_function(lambda t1, t2: np.exp(-((t1 - t2) ** 2)), [grid_t, grid_t])
+
+    result = f.convolve(kernel, dim="t")
+
+    expected = np.zeros_like(f.values)
+    for ix in range(len(grid_x.points)):
+        for it in range(len(grid_t.points)):
+            expected[ix, it] = sum(
+                kernel.values[it, jt] * f.values[ix, jt] * grid_t.weights[jt]
+                for jt in range(len(grid_t.points))
+            )
+
+    assert np.allclose(result.values, expected, atol=1e-12)
+    assert result.values.shape == f.values.shape
+    assert [g.label for g in result.grids] == ["x", "t"]
+
+
 def test_interpolate_exact_recovery():
     """Interpolating onto the same grid returns the same values."""
     grid = Grid1D.gauss_legendre(-5.0, 5.0, 50, "x")

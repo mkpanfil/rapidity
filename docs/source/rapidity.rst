@@ -16,6 +16,8 @@ Submodules
    :maxdepth: 4
 
    rapidity.fredholm
+   rapidity.models
+   rapidity.tba
    rapidity.utils
 
 Module contents
