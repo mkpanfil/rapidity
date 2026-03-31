@@ -231,7 +231,7 @@ class TBAState:
         _check_grid(model, grid)
         kernel = model.kernel(grid)
         a = model.bare_state_density(grid)
-        rho_s = a + kernel.convolve(rho_p)
+        rho_s = a + rho_p.convolve(kernel)
         filling = rho_p / rho_s
         return cls(model, grid, filling)
 
