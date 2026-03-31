@@ -86,6 +86,7 @@ class LiebLiniger:
     """
 
     c: float
+    rapidity_label: str = "theta"
 
     def __post_init__(self):
         if self.c <= 0:
