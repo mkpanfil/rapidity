@@ -8,13 +8,13 @@
 - [ ] `interpolate` — extend to multi-dimensional fields
 
 ### Arithmetic
-- [ ] arithmetic operators `+`, `-`, `*`, `/` between fields and scalars
+- [X] arithmetic operators `+`, `-`, `*`, `/` between fields and scalars
 - [ ] `__abs__` — absolute value
 - [ ] `norm` — L2 norm integrated over the domain
 
 ### Inspection
 - [ ] `max`, `min` — maximum and minimum values
-- [ ] `plot` — simple matplotlib plotting method
+- [X] `plot` — simple matplotlib plotting method
 - [ ] `restrict` — restrict field to a subrange of an axis
 
 ### Transformations
@@ -26,5 +26,4 @@
 - [ ] `ghd.py` — GHD evolution
 
 ## Infrastructure
-- [ ] CI setup — GitHub Actions for automated testing
 - [ ] First release on PyPI
