@@ -102,6 +102,15 @@ def test_field_from_function_2d():
     assert np.allclose(field.values[:, 0], grid_x.points)  # t=0: f = x
 
 
+def test_field_from_function_constant():
+    """Field.from_function with a constant function returns an array not a scalar."""
+    grid = Grid1D.gauss_legendre(-5.0, 5.0, 50, "theta")
+    field = Field.from_function(lambda t: 1.0, [grid])
+    assert isinstance(field.values, np.ndarray)
+    assert field.values.shape == (50,)
+    assert np.allclose(field.values, 1.0)
+
+
 def test_field_from_values():
     """Field.from_values constructs a field with the given values."""
     grid = Grid1D.gauss_legendre(-5.0, 5.0, 50, "theta")

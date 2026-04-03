@@ -226,13 +226,20 @@ class Field:
         >>> grid_t = Grid1D.uniform(0.0, 1.0, 10, "t")
         >>> field = Field.from_function(lambda x, t: x + t, [grid_x, grid_t])
         """
-        # for a single grid
+
+    @classmethod
+    def from_function(cls, f: callable, grids: list["Grid1D"]) -> "Field":
         if len(grids) == 1:
-            values = f(grids[0].points)
-        # for multiple grids, meshgrid
+            values = np.asarray(f(grids[0].points))
+            # broadcast_to handles the case where f returns a scalar or
+            # an array of wrong shape, e.g. lambda t: 1.0
+            # copy() makes the result writeable since broadcast_to returns
+            # a read-only view
+            values = np.broadcast_to(values, grids[0].points.shape).copy()
         else:
             arrays = np.meshgrid(*[g.points for g in grids], indexing="ij")
-            values = f(*arrays)
+            expected_shape = tuple(g.points.size for g in grids)
+            values = np.broadcast_to(np.asarray(f(*arrays)), expected_shape).copy()
         return cls(values, grids)
 
     @classmethod
