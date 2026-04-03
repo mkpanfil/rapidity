@@ -102,6 +102,22 @@ def test_field_from_function_2d():
     assert np.allclose(field.values[:, 0], grid_x.points)  # t=0: f = x
 
 
+def test_field_from_values():
+    """Field.from_values constructs a field with the given values."""
+    grid = Grid1D.gauss_legendre(-5.0, 5.0, 50, "theta")
+    values = np.exp(-(grid.points**2))
+    field = Field.from_values(values, [grid])
+    assert np.allclose(field.values, values)
+
+
+def test_field_from_values_raises_for_wrong_shape():
+    """Field.from_values raises ValueError for inconsistent shape."""
+    grid = Grid1D.gauss_legendre(-5.0, 5.0, 50, "theta")
+    values = np.ones(30)  # wrong size
+    with pytest.raises(ValueError):
+        Field.from_values(values, [grid])
+
+
 def test_integrate_raises_for_missing_dim():
     """integrate raises ValueError when the requested dimension does not exist."""
     grid = Grid1D.gauss_legendre(-10, 10, 50, "theta")
@@ -139,7 +155,9 @@ def test_convolve_along_axis_2d():
     grid_t = Grid1D.uniform(0.0, 1.0, 5, "t")
 
     f = Field.from_function(lambda x, t: x + t, [grid_x, grid_t])
-    kernel = Field.from_function(lambda t1, t2: np.exp(-((t1 - t2) ** 2)), [grid_t, grid_t])
+    kernel = Field.from_function(
+        lambda t1, t2: np.exp(-((t1 - t2) ** 2)), [grid_t, grid_t]
+    )
 
     result = f.convolve(kernel, dim="t")
 

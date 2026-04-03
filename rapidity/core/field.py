@@ -236,6 +236,45 @@ class Field:
         return cls(values, grids)
 
     @classmethod
+    def from_values(cls, values: np.ndarray, grids: list["Grid1D"]) -> "Field":
+        """Construct a Field from an array of values and a list of grids.
+
+        The shape of values must be consistent with the grids — axis i
+        must have the same size as grids[i].
+
+        Parameters
+        ----------
+        values : np.ndarray
+            Array of values. Shape must match the sizes of the grids.
+        grids : list[Grid1D]
+            Grids defining the domain. The order determines the axis
+            ordering of the values array.
+
+        Returns
+        -------
+        Field
+            A Field with the given values on the given grids.
+
+        Raises
+        ------
+        ValueError
+            If the shape of values is inconsistent with the grids.
+
+        Examples
+        --------
+        >>> grid = Grid1D.gauss_legendre(-5.0, 5.0, 50, "theta")
+        >>> values = np.exp(-grid.points**2)
+        >>> field = Field.from_values(values, [grid])
+        """
+        expected_shape = tuple(g.points.size for g in grids)
+        if values.shape != expected_shape:
+            raise ValueError(
+                f"Shape of values {values.shape} is inconsistent with "
+                f"grids {expected_shape}"
+            )
+        return cls(values, grids)
+
+    @classmethod
     def load(cls, path: str) -> "Field":
         """Load a field from an HDF5 file.
 
