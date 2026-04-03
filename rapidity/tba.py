@@ -235,6 +235,41 @@ class TBAState:
         filling = rho_p / rho_s
         return cls(model, grid, filling)
 
+    @classmethod
+    def zero_temperature(
+        cls, model: Model, theta_f: float, n_points: int = 200
+    ) -> "TBAState":
+        """Construct zero temperature ground state.
+
+        At zero temperature all states within the Fermi sea are filled.
+        The particle density satisfies the linear integral equation:
+
+        .. math::
+
+            \\rho_p(\\theta) = a(\\theta) + \\int_{-\\theta_F}^{\\theta_F}
+            K(\\theta - \\theta') \\rho_p(\\theta') d\\theta'
+
+        which is equivalent to dressing with uniform filling n=1.
+
+        Parameters
+        ----------
+        model : Model
+            The integrable model.
+        theta_f : float
+            The Fermi rapidity.
+        n_points : int, optional
+            Number of Gauss-Legendre quadrature points. Default is 200.
+
+        Returns
+        -------
+        TBAState
+            The zero temperature ground state with filling n=1 everywhere.
+        """
+        label = model.rapidity_label
+        grid = Grid1D.gauss_legendre(-theta_f, theta_f, n_points, label)
+        filling = Field.from_function(lambda t: np.ones_like(t), [grid])
+        return cls.from_filling(model, grid, filling)
+
     def bare_state_density(self) -> Field:
         """Bare density of states a(theta).
 
