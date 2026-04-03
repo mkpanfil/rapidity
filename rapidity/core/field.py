@@ -227,8 +227,6 @@ class Field:
         >>> field = Field.from_function(lambda x, t: x + t, [grid_x, grid_t])
         """
 
-    @classmethod
-    def from_function(cls, f: callable, grids: list["Grid1D"]) -> "Field":
         if len(grids) == 1:
             values = np.asarray(f(grids[0].points))
             # broadcast_to handles the case where f returns a scalar or
