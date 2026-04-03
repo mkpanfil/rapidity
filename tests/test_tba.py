@@ -28,6 +28,36 @@ def test_tbastate_from_filling_roundtrip():
 
 
 # ---------------------------------------------------------------------------
+# Zero temperature
+# ---------------------------------------------------------------------------
+
+
+def test_zero_temperature_filling_is_one():
+    """Zero temperature filling function is 1 everywhere."""
+    model = LiebLiniger(c=1.0)
+    state = TBAState.zero_temperature(model, theta_f=1.0)
+    assert np.allclose(state.filling.values, 1.0)
+
+
+def test_zero_temperature_tonks_girardeau_density():
+    """In Tonks-Girardeau limit rho_p = 1/(2pi) inside Fermi sea."""
+    model = LiebLiniger(c=1e6)  # approximate Tonks-Girardeau
+    theta_f = 1.0
+    state = TBAState.zero_temperature(model, theta_f=theta_f)
+    expected = 1 / (2 * np.pi)
+    assert np.allclose(state.rho_p().values, expected, atol=1e-4)
+
+
+def test_zero_temperature_tonks_girardeau_total_density():
+    """In Tonks-Girardeau limit total density is theta_f / pi."""
+    model = LiebLiniger(c=1e6)
+    theta_f = 1.0
+    state = TBAState.zero_temperature(model, theta_f=theta_f)
+    expected = theta_f / np.pi
+    assert np.isclose(state.rho_p().integrate().values, expected, atol=1e-4)
+
+
+# ---------------------------------------------------------------------------
 # Free fermion limit
 # ---------------------------------------------------------------------------
 
