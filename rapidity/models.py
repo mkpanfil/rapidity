@@ -161,13 +161,13 @@ class LiebLiniger:
 
 
 # ---------------------------------------------------------------------------
-# LiebLiniger
+# QHR
 # ---------------------------------------------------------------------------
 
 
 @dataclass
 class QHR:
-    """The Quantum hard rods model of bosons with repulsive delta interaction.
+    """The Quantum hard rods model.
 
     The model is parameterized by the rod length a only. The
     thermodynamic state is encoded separately in :class:`~rapidity.tba.TBAState`.
@@ -248,7 +248,7 @@ class QHR:
         return Field.from_function(lambda t: np.ones_like(t) / (2 * np.pi), [grid])
 
     def kernel(self, grid: Grid1D) -> Field:
-        """Lieb-Liniger scattering kernel including the 1/(2π) factor.
+        """QHR scattering kernel including the 1/(2π) factor.
 
         .. math::
 
@@ -264,4 +264,4 @@ class QHR:
         Field
             The scattering kernel as a 2D Field.
         """
-        return make_kernel(lambda t: -self.a, grid)
+        return make_kernel(lambda t: -self.a / (2 * np.pi), grid)
