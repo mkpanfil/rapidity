@@ -240,6 +240,15 @@ def test_derivative_along_axis():
     assert np.allclose(result.values, expected, atol=1e-10)
 
 
+def test_field_apply():
+    """apply transforms field values correctly."""
+    grid = Grid1D.gauss_legendre(-5.0, 5.0, 50, "x")
+    field = Field.from_function(lambda x: x**2, [grid])
+    result = field.apply(np.exp)
+    assert np.allclose(result.values, np.exp(grid.points**2))
+    assert result.grids == field.grids
+
+
 def test_field_save_load_1d():
     """Saving and loading a 1D field recovers the original field exactly."""
     grid = Grid1D.gauss_legendre(-5.0, 5.0, 50, "theta")

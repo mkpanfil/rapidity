@@ -34,160 +34,6 @@ class Field:
     grids: list[Grid1D]
 
     # -----------------------------------------------------------------------
-    # Arithmetic operations
-    # -----------------------------------------------------------------------
-
-    def __add__(self, other: "Field | complex") -> "Field":
-        """Add two fields or a field and a scalar.
-
-        Two fields are added pointwise. If they have different dimensions,
-        the smaller field is broadcast along the missing dimensions, provided
-        the shared dimensions have identical grids.
-
-        Parameters
-        ----------
-        other : Field or scalar
-            The field or scalar to add. Scalars must be int, float, or complex.
-
-        Returns
-        -------
-        Field
-            The sum, defined on the union of both fields' grids.
-
-        Raises
-        ------
-        ValueError
-            If both fields share a dimension but with incompatible grids.
-        TypeError
-            If other is not a Field or a supported scalar type.
-        """
-        if isinstance(other, Field):
-            a, b, grids = _align(self, other)
-            return Field(a + b, grids)
-        if not isinstance(other, _SCALAR_TYPES):
-            raise TypeError(
-                f"unsupported operand type for +: 'Field' and '{type(other).__name__}'"
-            )
-        return Field(self.values + other, self.grids)
-
-    def __sub__(self, other: "Field | complex") -> "Field":
-        """Subtract two fields or a scalar from a field."""
-        if isinstance(other, Field):
-            a, b, grids = _align(self, other)
-            return Field(a - b, grids)
-        if not isinstance(other, _SCALAR_TYPES):
-            raise TypeError(
-                f"unsupported operand type for -: 'Field' and '{type(other).__name__}'"
-            )
-        return Field(self.values - other, self.grids)
-
-    def __mul__(self, other: "Field | complex") -> "Field":
-        """Multiply two fields or a field and a scalar."""
-        if isinstance(other, Field):
-            a, b, grids = _align(self, other)
-            return Field(a * b, grids)
-        if not isinstance(other, _SCALAR_TYPES):
-            raise TypeError(
-                f"unsupported operand type for *: 'Field' and '{type(other).__name__}'"
-            )
-        return Field(self.values * other, self.grids)
-
-    def __truediv__(self, other: "Field | complex") -> "Field":
-        """Divide two fields or a field by a scalar."""
-        if isinstance(other, Field):
-            a, b, grids = _align(self, other)
-            return Field(a / b, grids)
-        if not isinstance(other, _SCALAR_TYPES):
-            raise TypeError(
-                f"unsupported operand type for /: 'Field' and '{type(other).__name__}'"
-            )
-        return Field(self.values / other, self.grids)
-
-    def __neg__(self) -> "Field":
-        """Negate a field."""
-        return Field(-self.values, self.grids)
-
-    def __rmul__(self, other: complex) -> "Field":
-        """Right multiply a field by a scalar."""
-        if not isinstance(other, _SCALAR_TYPES):
-            raise TypeError(
-                f"unsupported operand type for *: '{type(other).__name__}' and 'Field'"
-            )
-        return Field(other * self.values, self.grids)
-
-    def __radd__(self, other: complex) -> "Field":
-        """Right add a scalar to a field."""
-        if not isinstance(other, _SCALAR_TYPES):
-            raise TypeError(
-                f"unsupported operand type for +: '{type(other).__name__}' and 'Field'"
-            )
-        return Field(other + self.values, self.grids)
-
-    def __rsub__(self, other: complex) -> "Field":
-        """Right subtract a field from a scalar."""
-        if not isinstance(other, _SCALAR_TYPES):
-            raise TypeError(
-                f"unsupported operand type for -: '{type(other).__name__}' and 'Field'"
-            )
-        return Field(other - self.values, self.grids)
-
-    def __rtruediv__(self, other: complex) -> "Field":
-        """Right divide a scalar by a field."""
-        if not isinstance(other, _SCALAR_TYPES):
-            raise TypeError(
-                f"unsupported operand type for /: '{type(other).__name__}' and 'Field'"
-            )
-        return Field(other / self.values, self.grids)
-
-    def __abs__(self) -> "Field":
-        """Absolute value of a field."""
-        return Field(np.abs(self.values), self.grids)
-
-    def __pow__(self, other: complex) -> "Field":
-        """Raise a field to a power."""
-        if not isinstance(other, _SCALAR_TYPES):
-            raise TypeError(
-                f"unsupported operand type for **: 'Field' and '{type(other).__name__}'"
-            )
-        return Field(self.values**other, self.grids)
-
-    # -----------------------------------------------------------------------
-    # Internal helpers
-    # -----------------------------------------------------------------------
-
-    def _get_axis(self, dim: str | None = None) -> tuple[int, Grid1D]:
-        """Find the axis index and grid corresponding to a dimension label.
-
-        Parameters
-        ----------
-        dim : str, optional
-            Dimension label to look up. If None and the field is 1D,
-            returns the only axis. If None and the field is multi-dimensional,
-            raises a ValueError.
-
-        Returns
-        -------
-        tuple[int, Grid1D]
-            The axis index and corresponding Grid1D object.
-
-        Raises
-        ------
-        ValueError
-            If dim is None and the field is multi-dimensional, or if the
-            requested dimension label is not found.
-        """
-        if dim is None:
-            if len(self.grids) != 1:
-                raise ValueError("Must specify dim for multi-dimensional fields")
-            return 0, self.grids[0]
-        for i, g in enumerate(self.grids):
-            if g.label == dim:
-                return i, g
-        raise ValueError(
-            f"Dimension '{dim}' not found. Available dimensions: {[g.label for g in self.grids]}"
-        )
-
-    # -----------------------------------------------------------------------
     # Constructors
     # -----------------------------------------------------------------------
 
@@ -443,6 +289,32 @@ class Field:
         return Field(f(new_grid.points), [new_grid])
 
     # -----------------------------------------------------------------------
+    # Elementwise operations
+    # -----------------------------------------------------------------------
+
+    def apply(self, f: callable) -> "Field":
+        """Apply a function elementwise to the field values.
+
+        Parameters
+        ----------
+        f : callable
+            A function to apply elementwise to the values. Must accept
+            and return a numpy array.
+
+        Returns
+        -------
+        Field
+            A new Field with the same grids and transformed values.
+
+        Examples
+        --------
+        >>> field.apply(np.exp)
+        >>> field.apply(np.log)
+        >>> field.apply(lambda x: np.log(1 + np.exp(-x)))
+        """
+        return Field(f(self.values), self.grids)
+
+    # -----------------------------------------------------------------------
     # I/O
     # -----------------------------------------------------------------------
 
@@ -462,6 +334,160 @@ class Field:
                 g.create_dataset("points", data=grid.points)
                 g.create_dataset("weights", data=grid.weights)
                 g.attrs["label"] = grid.label
+
+    # -----------------------------------------------------------------------
+    # Arithmetic operations
+    # -----------------------------------------------------------------------
+
+    def __add__(self, other: "Field | complex") -> "Field":
+        """Add two fields or a field and a scalar.
+
+        Two fields are added pointwise. If they have different dimensions,
+        the smaller field is broadcast along the missing dimensions, provided
+        the shared dimensions have identical grids.
+
+        Parameters
+        ----------
+        other : Field or scalar
+            The field or scalar to add. Scalars must be int, float, or complex.
+
+        Returns
+        -------
+        Field
+            The sum, defined on the union of both fields' grids.
+
+        Raises
+        ------
+        ValueError
+            If both fields share a dimension but with incompatible grids.
+        TypeError
+            If other is not a Field or a supported scalar type.
+        """
+        if isinstance(other, Field):
+            a, b, grids = _align(self, other)
+            return Field(a + b, grids)
+        if not isinstance(other, _SCALAR_TYPES):
+            raise TypeError(
+                f"unsupported operand type for +: 'Field' and '{type(other).__name__}'"
+            )
+        return Field(self.values + other, self.grids)
+
+    def __sub__(self, other: "Field | complex") -> "Field":
+        """Subtract two fields or a scalar from a field."""
+        if isinstance(other, Field):
+            a, b, grids = _align(self, other)
+            return Field(a - b, grids)
+        if not isinstance(other, _SCALAR_TYPES):
+            raise TypeError(
+                f"unsupported operand type for -: 'Field' and '{type(other).__name__}'"
+            )
+        return Field(self.values - other, self.grids)
+
+    def __mul__(self, other: "Field | complex") -> "Field":
+        """Multiply two fields or a field and a scalar."""
+        if isinstance(other, Field):
+            a, b, grids = _align(self, other)
+            return Field(a * b, grids)
+        if not isinstance(other, _SCALAR_TYPES):
+            raise TypeError(
+                f"unsupported operand type for *: 'Field' and '{type(other).__name__}'"
+            )
+        return Field(self.values * other, self.grids)
+
+    def __truediv__(self, other: "Field | complex") -> "Field":
+        """Divide two fields or a field by a scalar."""
+        if isinstance(other, Field):
+            a, b, grids = _align(self, other)
+            return Field(a / b, grids)
+        if not isinstance(other, _SCALAR_TYPES):
+            raise TypeError(
+                f"unsupported operand type for /: 'Field' and '{type(other).__name__}'"
+            )
+        return Field(self.values / other, self.grids)
+
+    def __neg__(self) -> "Field":
+        """Negate a field."""
+        return Field(-self.values, self.grids)
+
+    def __rmul__(self, other: complex) -> "Field":
+        """Right multiply a field by a scalar."""
+        if not isinstance(other, _SCALAR_TYPES):
+            raise TypeError(
+                f"unsupported operand type for *: '{type(other).__name__}' and 'Field'"
+            )
+        return Field(other * self.values, self.grids)
+
+    def __radd__(self, other: complex) -> "Field":
+        """Right add a scalar to a field."""
+        if not isinstance(other, _SCALAR_TYPES):
+            raise TypeError(
+                f"unsupported operand type for +: '{type(other).__name__}' and 'Field'"
+            )
+        return Field(other + self.values, self.grids)
+
+    def __rsub__(self, other: complex) -> "Field":
+        """Right subtract a field from a scalar."""
+        if not isinstance(other, _SCALAR_TYPES):
+            raise TypeError(
+                f"unsupported operand type for -: '{type(other).__name__}' and 'Field'"
+            )
+        return Field(other - self.values, self.grids)
+
+    def __rtruediv__(self, other: complex) -> "Field":
+        """Right divide a scalar by a field."""
+        if not isinstance(other, _SCALAR_TYPES):
+            raise TypeError(
+                f"unsupported operand type for /: '{type(other).__name__}' and 'Field'"
+            )
+        return Field(other / self.values, self.grids)
+
+    def __abs__(self) -> "Field":
+        """Absolute value of a field."""
+        return Field(np.abs(self.values), self.grids)
+
+    def __pow__(self, other: complex) -> "Field":
+        """Raise a field to a power."""
+        if not isinstance(other, _SCALAR_TYPES):
+            raise TypeError(
+                f"unsupported operand type for **: 'Field' and '{type(other).__name__}'"
+            )
+        return Field(self.values**other, self.grids)
+
+    # -----------------------------------------------------------------------
+    # Internal helpers
+    # -----------------------------------------------------------------------
+
+    def _get_axis(self, dim: str | None = None) -> tuple[int, Grid1D]:
+        """Find the axis index and grid corresponding to a dimension label.
+
+        Parameters
+        ----------
+        dim : str, optional
+            Dimension label to look up. If None and the field is 1D,
+            returns the only axis. If None and the field is multi-dimensional,
+            raises a ValueError.
+
+        Returns
+        -------
+        tuple[int, Grid1D]
+            The axis index and corresponding Grid1D object.
+
+        Raises
+        ------
+        ValueError
+            If dim is None and the field is multi-dimensional, or if the
+            requested dimension label is not found.
+        """
+        if dim is None:
+            if len(self.grids) != 1:
+                raise ValueError("Must specify dim for multi-dimensional fields")
+            return 0, self.grids[0]
+        for i, g in enumerate(self.grids):
+            if g.label == dim:
+                return i, g
+        raise ValueError(
+            f"Dimension '{dim}' not found. Available dimensions: {[g.label for g in self.grids]}"
+        )
 
 
 def _align(

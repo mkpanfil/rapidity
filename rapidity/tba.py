@@ -60,7 +60,8 @@ def _solve_tba(
     epsilon = Field(driving.values.copy(), driving.grids)
 
     for _ in range(max_iter):
-        log_term = Field(np.log(1 + np.exp(-epsilon.values)), epsilon.grids)
+        # log_term = Field(np.log(1 + np.exp(-epsilon.values)), epsilon.grids)
+        log_term = epsilon.apply(lambda x: np.log(1 + np.exp(-x)))
         epsilon_new = driving - log_term.convolve(kernel, dim="theta")
         if np.max(np.abs((epsilon_new - epsilon).values)) < tol:
             return epsilon_new
@@ -186,7 +187,8 @@ class TBAState:
         driving = model.driving(grid, betas)
         kernel = model.kernel(grid)
         epsilon = _solve_tba(driving, kernel, tol, max_iter)
-        filling = Field(1 / (1 + np.exp(epsilon.values)), [grid])
+        #filling = Field(1 / (1 + np.exp(epsilon.values)), [grid])
+        filling = epsilon.apply(lambda x: 1 / (1 + np.exp(x)))
         return cls(model, grid, filling)
 
     @classmethod
@@ -371,9 +373,10 @@ class TBAState:
         float
             The free energy density.
         """
+        # epsilon = Field(
+        #     np.log((1 - self.filling.values) / self.filling.values), [self.grid]
+        # )
         # the code is not protected against dividing by 0.
-        epsilon = Field(
-            np.log((1 - self.filling.values) / self.filling.values), [self.grid]
-        )
+        epsilon = self.filling.apply(lambda n: np.log((1 - n) / n))
         log_term = Field(np.log(1 + np.exp(-epsilon.values)), [self.grid])
         return -(log_term / (2 * np.pi)).integrate().values
