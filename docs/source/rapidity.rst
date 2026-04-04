@@ -18,6 +18,7 @@ Submodules
    rapidity.fredholm
    rapidity.models
    rapidity.tba
+   rapidity.thermodynamics
    rapidity.utils
 
 Module contents
