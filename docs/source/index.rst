@@ -7,4 +7,6 @@ Numerics for quantum integrable models.
    :maxdepth: 2
    :caption: Contents:
 
+   getting_started
    modules
+   references

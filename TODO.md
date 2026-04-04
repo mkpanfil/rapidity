@@ -23,7 +23,7 @@
 - [ ] `outer` — outer product of two 1D fields to produce a 2D field
 
 ## Models
-- [ ] 'models.py' - tests for QHR
+- [ ] 'test_models.py' - tests for QHR
 - [ ] `XXX` - XXX spin chain
 
 ## Physics modules
@@ -35,6 +35,11 @@
 - [ ] `sound_velocity` - sound velocity from TBA
 - [ ] `Luttinger_K` - Luttinger liquid parameter from K
 - [ ] `susceptibility` - charge susceptibility matrix 
+
+## Documentation
+- [X] `Getting started` - basic guidelines
+- [ ] `Lieb-Liniger tutorial` - TBA computation for Lieb-Liniger; Jupyter notebook
+- [ ] `Random matrix theory` - Some Sine-kernel example
 
 ## Infrastructure
 - [ ] First release on PyPI
