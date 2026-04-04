@@ -8,5 +8,6 @@ Numerics for quantum integrable models.
    :caption: Contents:
 
    getting_started
+   tutorials/tba_lieb_liniger
    modules
    references
