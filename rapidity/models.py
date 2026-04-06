@@ -75,10 +75,6 @@ class StringModel(Protocol):
         """Basic kernel a_n(theta) as a 1D Field."""
         ...
 
-    def kernel_a_n(self, n: int, grid: Grid1D) -> Field:
-        """Basic kernel a_n(theta) as a 2D Field for convolution."""
-        ...
-
     def convolve_a1(self, f: Field) -> Field: ...
 
     def driving(self, grid: Grid1D, betas: dict[int, float]) -> list[Field]:
@@ -461,43 +457,6 @@ class XXXSpinChain:
             ).real
 
         return Field.from_function(charge_values, [grid])
-
-    def kernel(self, n: int, m: int, grid: Grid1D) -> Field:
-        """Full scattering kernel T_{nm} as a 2D Field.
-
-        For the simplified TBA only kernel_a_n(1, grid) is needed.
-        This method provides the full kernel for reference.
-
-        .. math::
-
-            T_{nm}(\\theta) = (1-\\delta_{nm}) a_{|n-m|} +
-            2a_{|n-m|+2} + \\ldots + 2a_{n+m-2} + a_{n+m}
-
-        Parameters
-        ----------
-        n : int
-            First string length.
-        m : int
-            Second string length.
-        grid : Grid1D
-            The rapidity grid.
-
-        Returns
-        -------
-        Field
-            The scattering kernel as a 2D Field.
-        """
-
-        def T_nm(t: np.ndarray) -> np.ndarray:
-            result = np.zeros_like(t)
-            for k in range(abs(n - m), n + m + 1, 2):
-                if k == 0:
-                    continue
-                prefactor = 1 if (k == abs(n - m) or k == n + m) else 2
-                result += prefactor * self.a_n(k, grid).values
-            return result
-
-        return make_kernel(T_nm, grid)
 
     def driving(self, grid: Grid1D, betas: dict[int, float]) -> list[Field]:
         """Driving terms for all string species with J=1.
