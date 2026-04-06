@@ -1,17 +1,19 @@
 """
 Physical models for the rapidity package.
 
-This module defines the :class:`Model` protocol, which specifies the
-interface that all integrable models must implement, and concrete
-implementations of specific models.
+This module defines the :class:`Model` and :class:`StringModel` protocols,
+which specify the interfaces that integrable models must implement, and
+concrete implementations of specific models.
 
 Currently implemented:
 
-- :class:`LiebLiniger` — the Lieb-Liniger model of bosons with delta
-  interaction
+- :class:`LiebLiniger` — satisfies :class:`Model`
+- :class:`HardRods` — satisfies :class:`Model`
+- :class:`XXXSpinChain` — satisfies :class:`StringModel`
 
-To implement a new model, create a dataclass that satisfies the
-:class:`Model` protocol by implementing all required methods.
+To implement a new single-species model, create a dataclass that satisfies
+the :class:`Model` protocol. For a model with string hypothesis, satisfy
+the :class:`StringModel` protocol instead.
 """
 
 import numpy as np
@@ -50,6 +52,35 @@ class Model(Protocol):
 
     def kernel(self, grid: Grid1D) -> Field:
         """Scattering kernel including the 1/(2π) factor."""
+        ...
+
+
+@runtime_checkable
+class StringModel(Protocol):
+    """Protocol for integrable models with string hypothesis."""
+
+    n_max: int
+    rapidity_label: str
+
+    def charge(self, order: int, species: int, grid: Grid1D) -> Field:
+        """Single-particle eigenvalue of the conserved charge of given order
+        for string of length species."""
+        ...
+
+    def bare_state_density(self, species: int, grid: Grid1D) -> Field:
+        """Bare density of states a_n(theta) for string of length species."""
+        ...
+
+    def a_n(self, n: int, grid: Grid1D) -> Field:
+        """Basic kernel a_n(theta) as a 1D Field."""
+        ...
+
+    def kernel_a_n(self, n: int, grid: Grid1D) -> Field:
+        """Basic kernel a_n(theta) as a 2D Field for convolution."""
+        ...
+
+    def driving(self, grid: Grid1D, betas: dict[int, float]) -> list[Field]:
+        """Driving terms for all string species."""
         ...
 
 
@@ -265,3 +296,223 @@ class QHR:
             The scattering kernel as a 2D Field.
         """
         return make_kernel(lambda t: -self.a / (2 * np.pi), grid)
+
+
+# ---------------------------------------------------------------------------
+# XXX spin chain
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class XXXSpinChain:
+    """XXX Heisenberg spin chain with string hypothesis.
+
+    The model uses the simplified TBA equations that couple only
+    neighbouring string species, requiring only the basic kernel
+    a_1. The full kernel T_{nm} is also provided for reference.
+
+    Parameters
+    ----------
+    S : float
+        Spin. Must be a positive half-integer. Default is 0.5.
+    n_max : int
+        Maximum string length. Default is 10.
+    rapidity_label : str
+        Label for the rapidity dimension. Default is 'theta'.
+
+    Examples
+    --------
+    >>> model = XXXSpinChain(S=0.5, n_max=10)
+    >>> grid = Grid1D.gauss_legendre(-10, 10, 200, "theta")
+    >>> a1 = model.kernel_a_n(1, grid)
+    """
+
+    S: float = 0.5
+    n_max: int = 10
+    rapidity_label: str = "theta"
+
+    def __post_init__(self):
+        if self.S <= 0:
+            raise ValueError(f"Spin S must be positive, got {self.S}")
+        if not (self.S * 2).is_integer():
+            raise ValueError(f"Spin S must be a half-integer, got {self.S}")
+        if self.n_max < 1:
+            raise ValueError(
+                f"Maximum string length n_max must be at least 1, got {self.n_max}"
+            )
+        if self.S >= 1:
+            raise ValueError(
+                f"Only spin S=1/2 properly implemented for XXX chain, got {self.S}"
+            )
+
+    def a_n(self, n: int, grid: Grid1D) -> Field:
+        """Basic kernel a_n(theta) as a 1D Field.
+
+        .. math::
+
+            a_n(\\theta) = \\frac{1}{2\\pi}
+            \\frac{n}{(n/2)^2 + \\theta^2}
+
+        Parameters
+        ----------
+        n : int
+            String length.
+        grid : Grid1D
+            The rapidity grid.
+
+        Returns
+        -------
+        Field
+            The basic kernel as a 1D Field.
+        """
+        return Field.from_function(
+            lambda t: n / (2 * np.pi * ((n / 2) ** 2 + t**2)), [grid]
+        )
+
+    def kernel_a_n(self, n: int, grid: Grid1D) -> Field:
+        """Basic kernel a_n(theta) as a 2D Field for convolution.
+
+        Parameters
+        ----------
+        n : int
+            String length.
+        grid : Grid1D
+            The rapidity grid.
+
+        Returns
+        -------
+        Field
+            The basic kernel as a 2D Field.
+        """
+        return make_kernel(lambda t: n / (2 * np.pi * ((n / 2) ** 2 + t**2)), grid)
+
+    def bare_state_density(self, species: int, grid: Grid1D) -> Field:
+        """Bare state density for string of length species.
+
+        .. math::
+
+            a_n(\\theta) = \\frac{1}{2\\pi}
+            \\frac{n}{(n/2)^2 + \\theta^2}
+
+        Parameters
+        ----------
+        species : int
+            String length n, starting from 1.
+        grid : Grid1D
+            The rapidity grid.
+
+        Returns
+        -------
+        Field
+            The bare state density as a 1D Field.
+        """
+        return self.a_n(species, grid)
+
+    def charge(self, order: int, species: int, grid: Grid1D) -> Field:
+        """Single-particle eigenvalue of the conserved charge of given order
+        for string of length species.
+
+        For order=1 the momentum charge is:
+
+        .. math::
+
+            q_1^{(n)}(\\theta) = 2\\arctan\\left(\\frac{2\\theta}{n}\\right)
+
+        For higher orders the charges involve the digamma function:
+
+        .. math::
+
+            q_r^{(n)}(\\theta) = \\frac{i}{r-1}\\left(
+            \\psi\\left(\\frac{n}{2} + i\\theta + \\frac{r-1}{2}\\right) -
+            \\psi\\left(\\frac{n}{2} - i\\theta + \\frac{r-1}{2}\\right)
+            \\right)
+
+        Parameters
+        ----------
+        order : int
+            Order of the charge, starting from 1.
+        species : int
+            String length n, starting from 1.
+        grid : Grid1D
+            The rapidity grid.
+
+        Returns
+        -------
+        Field
+            The charge eigenvalue as a 1D Field.
+        """
+        from scipy.special import digamma
+
+        if order == 1:
+            return Field.from_function(lambda t: 2 * np.arctan(2 * t / species), [grid])
+
+        def charge_values(t: np.ndarray) -> np.ndarray:
+            n = species
+            r = order
+            return (
+                1j
+                / (r - 1)
+                * (
+                    digamma(n / 2 + 1j * t + (r - 1) / 2)
+                    - digamma(n / 2 - 1j * t + (r - 1) / 2)
+                )
+            ).real
+
+        return Field.from_function(charge_values, [grid])
+
+    def kernel(self, n: int, m: int, grid: Grid1D) -> Field:
+        """Full scattering kernel T_{nm} as a 2D Field.
+
+        For the simplified TBA only kernel_a_n(1, grid) is needed.
+        This method provides the full kernel for reference.
+
+        .. math::
+
+            T_{nm}(\\theta) = (1-\\delta_{nm}) a_{|n-m|} +
+            2a_{|n-m|+2} + \\ldots + 2a_{n+m-2} + a_{n+m}
+
+        Parameters
+        ----------
+        n : int
+            First string length.
+        m : int
+            Second string length.
+        grid : Grid1D
+            The rapidity grid.
+
+        Returns
+        -------
+        Field
+            The scattering kernel as a 2D Field.
+        """
+
+        def T_nm(t: np.ndarray) -> np.ndarray:
+            result = np.zeros_like(t)
+            for k in range(abs(n - m), n + m + 1, 2):
+                if k == 0:
+                    continue
+                prefactor = 1 if (k == abs(n - m) or k == n + m) else 2
+                result += prefactor * self.a_n(k, grid).values
+            return result
+
+        return make_kernel(T_nm, grid)
+
+    def driving(self, grid: Grid1D, betas: dict[int, float]) -> list[Field]:
+        """Driving terms for all string species.
+
+        Parameters
+        ----------
+        grid : Grid1D
+            The rapidity grid.
+        betas : dict[int, float]
+            Chemical potentials keyed by charge order.
+
+        Returns
+        -------
+        list[Field]
+            Driving terms for each string species n=1,...,n_max.
+        """
+        return [
+            sum(beta * self.charge(r, n + 1, grid) for r, beta in betas.items())
+            for n in range(self.n_max)
+        ]
