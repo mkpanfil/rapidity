@@ -79,6 +79,8 @@ class StringModel(Protocol):
         """Basic kernel a_n(theta) as a 2D Field for convolution."""
         ...
 
+    def convolve_a1(self, f: Field) -> Field: ...
+
     def driving(self, grid: Grid1D, betas: dict[int, float]) -> list[Field]:
         """Driving terms for all string species."""
         ...
@@ -498,21 +500,74 @@ class XXXSpinChain:
         return make_kernel(T_nm, grid)
 
     def driving(self, grid: Grid1D, betas: dict[int, float]) -> list[Field]:
-        """Driving terms for all string species.
+        """Driving terms for all string species with J=1.
+
+        .. math::
+
+            \\epsilon_n^0(\\theta) = \\delta_{n,1} \\beta_2 \\cdot 2\\pi a_1(\\theta)
+            - n \\beta_0
+
+        where :math:`\\beta_2 = 1/T` is the inverse temperature and
+        :math:`\\beta_0 = h/T` is the reduced magnetic field.
 
         Parameters
         ----------
         grid : Grid1D
             The rapidity grid.
         betas : dict[int, float]
-            Chemical potentials keyed by charge order.
+            Chemical potentials keyed by charge order:
+            - key 0: reduced magnetic field h/T
+            - key 2: inverse temperature 1/T
 
         Returns
         -------
         list[Field]
             Driving terms for each string species n=1,...,n_max.
         """
-        return [
-            sum(beta * self.charge(r, n + 1, grid) for r, beta in betas.items())
-            for n in range(self.n_max)
-        ]
+        beta_2 = betas.get(2, 0.0)  # inverse temperature
+        beta_0 = betas.get(0, 0.0)  # reduced magnetic field
+
+        a1 = self.a_n(1, grid)
+
+        driving = []
+        for n in range(1, self.n_max + 1):
+            if n == 1:
+                d = a1 * (2 * np.pi * beta_2) - Field.from_function(
+                    lambda t: np.full_like(t, beta_0), [grid]
+                )
+            else:
+                d = Field.from_function(lambda t: np.full_like(t, -n * beta_0), [grid])
+            driving.append(d)
+        return driving
+
+    def convolve_a1(self, f: Field) -> Field:
+        """Convolve f with the basic kernel a_1 using FFT.
+
+        Uses the analytical Fourier transform of a_1:
+
+        .. math::
+
+            \\hat{a}_1(k) = e^{-|k|/2}
+
+        which avoids discretization issues with the Lorentzian kernel.
+
+        Parameters
+        ----------
+        f : Field
+            The field to convolve. Must be defined on a uniform grid.
+
+        Returns
+        -------
+        Field
+            The convolution result on the same grid.
+        """
+        grid = f.grids[0]
+        dx = grid.points[1] - grid.points[0]
+        n = len(grid.points)
+
+        k = 2 * np.pi * np.fft.fftfreq(n, d=dx)
+        a1_hat = np.exp(-np.abs(k) / 2)
+        f_hat = np.fft.fft(f.values)
+        result = np.fft.ifft(a1_hat * f_hat).real
+
+        return Field(result, f.grids)

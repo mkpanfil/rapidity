@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-from rapidity.core import Grid1D
+from rapidity.core import Grid1D, Field
 from rapidity.models import Model, LiebLiniger, StringModel, XXXSpinChain
 
 
@@ -113,6 +113,16 @@ def test_xxx_a_n_is_lorentzian():
         assert np.allclose(a.values, expected, atol=1e-10), (
             f"Failed for string species n={n}"
         )
+
+
+def test_xxx_convolve_a1_constant():
+    """Convolving a constant with a1 gives the same constant."""
+    model = XXXSpinChain(S=0.5, n_max=3)
+    grid = Grid1D.uniform(-20, 20, 1000, "theta")
+    f = Field.from_function(lambda t: np.full_like(t, np.log(2)), [grid])
+    result = model.convolve_a1(f)
+    # convolution of constant c with a1 should give c * integral(a1) = c
+    assert np.allclose(result.values[100:-100], np.log(2), atol=1e-4)
 
 
 def test_xxx_charge_order_1_is_arctan():
