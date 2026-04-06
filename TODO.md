@@ -19,12 +19,12 @@
 - [ ] `restrict` — restrict field to a subrange of an axis
 
 ### Transformations
-- [ ] `apply` — apply an arbitrary function to the values
+- [X] `apply` — apply an arbitrary function to the values
 - [ ] `outer` — outer product of two 1D fields to produce a 2D field
 
 ## Models
 - [ ] 'test_models.py' - tests for QHR
-- [ ] `XXX` - XXX spin chain
+- [X] `XXX` - XXX spin chain
 
 ## Physics modules
 - [X] `tba.py` — dressing equation, TBA solver
@@ -38,7 +38,8 @@
 
 ## Documentation
 - [X] `Getting started` - basic guidelines
-- [ ] `Lieb-Liniger tutorial` - TBA computation for Lieb-Liniger; Jupyter notebook
+- [X] `Lieb-Liniger tutorial` - TBA computation for Lieb-Liniger; Jupyter notebook
+- [ ] `XXX spin chain tutorial` - TBA computation for XXX chain; Jupyter notebook
 - [ ] `Random matrix theory` - Some Sine-kernel example
 
 ## Infrastructure
