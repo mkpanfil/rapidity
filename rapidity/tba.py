@@ -494,27 +494,6 @@ class TBAState:
         energy = self.model.charge(2, self.grid)
         return self.dress(energy.derivative()) / self.dress(momentum.derivative())
 
-    def free_energy(self) -> float:
-        """Compute the free energy density.
-
-        .. math::
-
-            f = -\\int \\frac{d\\theta}{2\\pi}
-            \\log(1 + e^{-\\epsilon(\\theta)})
-
-        Returns
-        -------
-        float
-            The free energy density.
-        """
-        # epsilon = Field(
-        #     np.log((1 - self.filling.values) / self.filling.values), [self.grid]
-        # )
-        # the code is not protected against dividing by 0.
-        epsilon = self.filling.apply(lambda n: np.log((1 - n) / n))
-        log_term = Field(np.log(1 + np.exp(-epsilon.values)), [self.grid])
-        return -(log_term / (2 * np.pi)).integrate().values
-
 
 @dataclass
 class StringTBAState:
@@ -670,24 +649,3 @@ class StringTBAState:
         de_dr = self.dress([e.derivative(label) for e in energy])
         dp_dr = self.dress([p.derivative(label) for p in momentum])
         return [de / dp for de, dp in zip(de_dr, dp_dr)]
-
-    def free_energy(self) -> float:
-        """Compute the free energy density.
-
-        .. math::
-
-            f = -\\sum_n \\int d\\theta\\,
-            a_n(\\theta) \\log(1 + e^{-\\epsilon_n(\\theta)})
-
-        Returns
-        -------
-        float
-            The free energy density.
-        """
-        total = 0.0
-        for n, filling in enumerate(self.filling):
-            a_n = self.model.bare_state_density(n + 1, self.grid)
-            epsilon = filling.apply(lambda x: np.log((1 - x) / x))
-            log_term = epsilon.apply(lambda x: np.log(1 + np.exp(-x)))
-            total += -(a_n * log_term).integrate().values
-        return total
